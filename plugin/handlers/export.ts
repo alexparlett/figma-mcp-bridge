@@ -38,7 +38,7 @@ export async function exportNode(cmd: Command): Promise<CommandResult> {
       success: true,
       data: {
         format: 'JSON',
-        content: serializeNode(node, 0, 10)
+        content: serializeNode(node, 0, { maxDepth: 10, compact: false, excludeVerbose: false })
       }
     };
   }

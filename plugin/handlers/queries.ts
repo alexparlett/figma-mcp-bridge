@@ -5,62 +5,114 @@ import type { CommandResult } from "../../types/messages.js";
 import type { SceneNode as SerializedSceneNode } from "../../types/nodes.js";
 import { nodeRegistry } from "../registry.js";
 import { defaultVal, colorToHex } from "../utils.js";
+import { SERIALIZABLE_PROPS } from "../../types/serializable-props.js";
+
+// ============ SERIALIZATION OPTIONS ============
+
+/** Properties returned in compact mode */
+const COMPACT_PROPS = ['x', 'y', 'width', 'height', 'visible', 'locked'] as const;
+
+/** Verbose properties excluded by default (large/rarely needed) */
+const VERBOSE_PROPS = new Set([
+  'absoluteTransform', 'relativeTransform', 'absoluteBoundingBox', 'absoluteRenderBounds',
+  'reactions', 'exportSettings', 'vectorNetwork', 'vectorPaths',
+  'componentPropertyDefinitions', 'componentProperties', 'overrides',
+  'layoutGrids', 'guides', 'effects', 'fills', 'strokes',
+]);
+
+export interface SerializeOptions {
+  /** Max depth to traverse children (default: 0) */
+  maxDepth?: number;
+  /** Compact mode - only essential properties */
+  compact?: boolean;
+  /** Specific fields to include (overrides other filters) */
+  fields?: string[];
+  /** Exclude verbose properties (default: true) */
+  excludeVerbose?: boolean;
+}
+
+/** Extract serialization options from QueryData */
+function getSerializeOptions(d: QueryData): SerializeOptions {
+  return {
+    maxDepth: defaultVal(d.depth, 0),
+    compact: d.compact ?? true, // Default to compact mode
+    fields: d.fields,
+    excludeVerbose: d.excludeVerbose ?? true,
+  };
+}
 
 // ============ HELPER: Serialize node to SceneNode ============
-export function serializeNode(node: BaseNode, depth: number, maxDepth: number): SerializedSceneNode | null {
+export function serializeNode(
+  node: BaseNode,
+  depth: number,
+  opts: SerializeOptions
+): SerializedSceneNode | null {
   if (!node) return null;
 
   const sceneNode = node as SceneNode;
+  const maxDepth = opts.maxDepth ?? 0;
 
   // Base properties all nodes have
-  const base = {
+  const base: Record<string, unknown> = {
     id: node.id,
     name: node.name,
     type: node.type,
   };
 
-  // Helper to serialize children if within depth limit
-  const serializeChildren = (): SerializedSceneNode[] | undefined => {
-    if (!('children' in sceneNode) || depth >= maxDepth) return undefined;
-    const children = (sceneNode as ChildrenMixin).children
-      .map(child => serializeNode(child, depth + 1, maxDepth))
-      .filter((c): c is SerializedSceneNode => c !== null);
-    return children.length > 0 ? children : undefined;
+  // Get child IDs (always) and full children (if depth allows and not compact)
+  const getChildren = (): { childIds?: string[]; children?: SerializedSceneNode[] } => {
+    if (!('children' in sceneNode)) return {};
+
+    const childNodes = (sceneNode as ChildrenMixin).children;
+    if (childNodes.length === 0) return {};
+
+    // Always include child IDs for reference
+    const childIds = childNodes.map(c => c.id);
+
+    // Only serialize full children if within depth limit AND not compact mode
+    if (depth < maxDepth && !opts.compact) {
+      const children = childNodes
+        .map(child => serializeNode(child, depth + 1, opts))
+        .filter((c): c is SerializedSceneNode => c !== null);
+      return { childIds, children: children.length > 0 ? children : undefined };
+    }
+
+    return { childIds };
   };
 
-  // Copy all serializable properties from the Figma node
-  // We spread the node and filter out non-serializable values
+  // Determine which properties to serialize
+  const getPropsToSerialize = (): readonly string[] => {
+    // Explicit fields filter takes precedence
+    if (opts.fields && opts.fields.length > 0) {
+      return opts.fields;
+    }
+    // Compact mode: only essential properties
+    if (opts.compact) {
+      return COMPACT_PROPS;
+    }
+    // Normal mode: all props, optionally excluding verbose ones
+    if (opts.excludeVerbose) {
+      return SERIALIZABLE_PROPS.filter(p => !VERBOSE_PROPS.has(p));
+    }
+    return SERIALIZABLE_PROPS;
+  };
+
+  // Copy serializable properties from the Figma node
   const serializeProps = (figmaNode: SceneNode): Record<string, unknown> => {
     const props: Record<string, unknown> = {};
+    const propsToSerialize = getPropsToSerialize();
 
-    for (const key of Object.keys(figmaNode)) {
-      // Skip internal/non-serializable properties
-      if (key === 'parent' || key === 'children' || key === 'removed' || key.startsWith('__')) {
-        continue;
-      }
-
+    for (const key of propsToSerialize) {
       try {
         const value = (figmaNode as unknown as Record<string, unknown>)[key];
 
-        // Skip functions and symbols
-        if (typeof value === 'function' || typeof value === 'symbol') {
-          continue;
-        }
+        if (value === undefined || value === null) continue;
+        if (typeof value === 'function' || typeof value === 'symbol') continue;
+        if (value === figma.mixed) continue;
 
-        // Skip undefined values
-        if (value === undefined) {
-          continue;
-        }
-
-        // Handle mixed values - just skip them or use a sensible default
-        if (value === figma.mixed) {
-          continue;
-        }
-
-        // Store the value
         props[key] = value;
       } catch {
-        // Some properties may throw when accessed - skip them
+        // Property doesn't exist on this node type - skip
         continue;
       }
     }
@@ -69,18 +121,19 @@ export function serializeNode(node: BaseNode, depth: number, maxDepth: number): 
   };
 
   const props = serializeProps(sceneNode);
-  const children = serializeChildren();
+  const { childIds, children } = getChildren();
 
   return {
     ...base,
     ...props,
+    ...(childIds ? { childIds } : {}),
     ...(children ? { children } : {}),
   } as SerializedSceneNode;
 }
 
 // ============ GET NODE BY NAME ============
 export function getNodeByName(cmd: Command): CommandResult {
-  const d = (cmd.data || {}) as NodeRefData;
+  const d = (cmd.data || {}) as NodeRefData & QueryData;
   const name = d.name;
   const node = figma.currentPage.findOne(n => n.name === name);
 
@@ -94,16 +147,15 @@ export function getNodeByName(cmd: Command): CommandResult {
     nodeRegistry.set(name, node);
   }
 
-  const queryData = d as QueryData & NodeRefData;
-  const maxDepth = defaultVal(queryData.depth, 3);
-  return { success: true, node: serializeNode(node, 0, maxDepth) ?? undefined };
+  const opts = getSerializeOptions(d);
+  return { success: true, node: serializeNode(node, 0, opts) ?? undefined };
 }
 
 // ============ GET SELECTION ============
 export function getSelection(cmd: Command): CommandResult {
   const d = (cmd.data || {}) as QueryData;
   const selection = figma.currentPage.selection;
-  const maxDepth = defaultVal(d.depth, 3);
+  const opts = getSerializeOptions(d);
 
   if (selection.length === 0) {
     return { success: true, nodes: [] };
@@ -114,7 +166,7 @@ export function getSelection(cmd: Command): CommandResult {
       if (d.register) {
         nodeRegistry.set(node.name, node);
       }
-      return serializeNode(node, 0, maxDepth);
+      return serializeNode(node, 0, opts);
     })
     .filter((n): n is SerializedSceneNode => n !== null);
 
@@ -124,12 +176,12 @@ export function getSelection(cmd: Command): CommandResult {
 // ============ GET PAGE NODES ============
 export function getPageNodes(cmd: Command): CommandResult {
   const d = (cmd.data || {}) as QueryData;
-  const maxDepth = defaultVal(d.depth, 1);
+  const opts = getSerializeOptions(d);
   const filter = d.filter;
 
   const nodes = figma.currentPage.children
     .filter(node => !filter || node.type === filter)
-    .map(node => serializeNode(node, 0, maxDepth))
+    .map(node => serializeNode(node, 0, opts))
     .filter((n): n is SerializedSceneNode => n !== null);
 
   return {
@@ -149,13 +201,13 @@ export function getNodeById(cmd: Command): CommandResult {
     throw new Error('Node not found with ID: ' + nodeId);
   }
 
-  const maxDepth = defaultVal(d.depth, 3);
+  const opts = getSerializeOptions(d);
 
   if (cmd.id) {
     nodeRegistry.set(cmd.id, node);
   }
 
-  return { success: true, node: serializeNode(node, 0, maxDepth) ?? undefined };
+  return { success: true, node: serializeNode(node, 0, opts) ?? undefined };
 }
 
 // ============ FIND NODES ============
@@ -163,7 +215,7 @@ export function findNodes(cmd: Command): CommandResult {
   const d = (cmd.data || {}) as FindNodesData;
   const results: SerializedSceneNode[] = [];
   const maxResults = defaultVal(d.maxResults, 50);
-  const maxDepth = defaultVal(d.depth, 1);
+  const opts = getSerializeOptions(d);
   const searchName = d.name;
   const filter = d.filter;
   const register = d.register;
@@ -182,7 +234,7 @@ export function findNodes(cmd: Command): CommandResult {
     }
 
     if (matches) {
-      const serialized = serializeNode(node, 0, maxDepth);
+      const serialized = serializeNode(node, 0, opts);
       if (serialized) {
         results.push(serialized);
       }
@@ -253,11 +305,11 @@ export function getStyles(cmd: Command): CommandResult {
 export function getComponents(cmd: Command): CommandResult {
   const d = (cmd.data || {}) as QueryData;
   const components: SerializedSceneNode[] = [];
-  const maxDepth = defaultVal(d.depth, 2);
+  const opts = getSerializeOptions(d);
 
   function findComponentsInNode(node: BaseNode) {
     if (node.type === 'COMPONENT') {
-      const serialized = serializeNode(node, 0, maxDepth);
+      const serialized = serializeNode(node, 0, opts);
       if (serialized) {
         components.push(serialized);
       }

@@ -9,6 +9,7 @@ import type { LayoutConfig, LayoutGridConfig } from './layout.js';
 import type { HorizontalConstraint, VerticalConstraint, Transform, VectorPath, StrokeAlign, StrokeCap, StrokeJoin } from './geometry.js';
 import type { ExportSetting } from './nodes.js';
 import type { TextRangeStyle } from './text.js';
+import type { SerializableProp } from './serializable-props.js';
 
 // ============ Base Data Types ============
 
@@ -614,11 +615,36 @@ export interface NodeRefData {
   name?: string;
 }
 
-/** Query options for retrieving nodes. */
+/**
+ * Query options for retrieving nodes.
+ *
+ * By default, queries return COMPACT data to minimize response size:
+ * - compact=true (default): Only id, name, type, x, y, width, height, visible, locked, childIds
+ * - depth=0 (default): Children returned as childIds array only, not fully serialized
+ * - excludeVerbose=true (default): Large properties like transforms, fills, effects excluded
+ *
+ * Use compact=false or fields=[...] to get more properties.
+ *
+ * Available fields (partial list - use compact=false for all):
+ * - Layout: x, y, width, height, rotation, constraints, layoutMode, layoutAlign, layoutGrow
+ * - Visual: fills, strokes, effects, opacity, blendMode, cornerRadius
+ * - Text: characters, fontSize, fontFamily, fontWeight, textAlignHorizontal
+ * - Auto-layout: paddingTop/Right/Bottom/Left, itemSpacing, primaryAxisAlignItems
+ * - Components: componentPropertyDefinitions, mainComponentId, componentProperties
+ */
 export interface QueryData {
+  /** Max depth to traverse children. 0 = childIds only (default), 1+ = serialize children (requires compact=false) */
   depth?: number;
+  /** Filter by node type (e.g., "FRAME", "TEXT") */
   filter?: string;
+  /** Register nodes in registry for later reference */
   register?: boolean;
+  /** Compact mode - only essential properties (id, name, type, x, y, width, height, visible, locked). Default: true */
+  compact?: boolean;
+  /** Specific fields to include (overrides compact/excludeVerbose). E.g., ["fills", "strokes", "effects"] */
+  fields?: SerializableProp[];
+  /** Exclude large properties like absoluteTransform, reactions, vectorNetwork. Default: true */
+  excludeVerbose?: boolean;
 }
 
 /** Search for nodes matching criteria. Supports partial name matching (case-insensitive) and type filtering. Returns multiple matches. */
