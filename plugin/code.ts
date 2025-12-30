@@ -197,7 +197,6 @@ function executeCommand(cmd: Command, parentNode?: SceneNode): Promise<BaseNode 
     'CREATE_RECTANGLE': () => Promise.resolve(createRectangle(cmd, parentNode)),
     'CREATE_ELLIPSE': () => Promise.resolve(createEllipse(cmd, parentNode)),
     'CREATE_LINE': () => Promise.resolve(createLine(cmd, parentNode)),
-    'CREATE_GROUP': () => Promise.resolve(createGroup(cmd)),
     'CREATE_POLYGON': () => createPolygon(cmd, parentNode),
     'CREATE_STAR': () => createStar(cmd, parentNode),
     'CREATE_VECTOR': () => createVector(cmd, parentNode),

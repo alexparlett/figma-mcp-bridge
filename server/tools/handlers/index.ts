@@ -65,6 +65,18 @@ import * as figma_set_viewport from "./figma_set_viewport.js";
 import * as figma_create_page from "./figma_create_page.js";
 import * as figma_create_page_divider from "./figma_create_page_divider.js";
 import * as figma_import_component from "./figma_import_component.js";
+import * as figma_component_from_node from "./figma_component_from_node.js";
+import * as figma_set_fills from "./figma_set_fills.js";
+import * as figma_set_strokes from "./figma_set_strokes.js";
+import * as figma_set_layout from "./figma_set_layout.js";
+import * as figma_set_mask from "./figma_set_mask.js";
+import * as figma_set_transform from "./figma_set_transform.js";
+import * as figma_set_image_fill from "./figma_set_image_fill.js";
+import * as figma_create_image from "./figma_create_image.js";
+import * as figma_get_image_data from "./figma_get_image_data.js";
+import * as figma_set_text_range_style from "./figma_set_text_range_style.js";
+import * as figma_clone_node from "./figma_clone_node.js";
+import * as figma_list_fonts from "./figma_list_fonts.js";
 
 // ============ Build handler map ============
 
@@ -120,6 +132,18 @@ const handlerModules = [
   figma_create_page,
   figma_create_page_divider,
   figma_import_component,
+  figma_component_from_node,
+  figma_set_fills,
+  figma_set_strokes,
+  figma_set_layout,
+  figma_set_mask,
+  figma_set_transform,
+  figma_set_image_fill,
+  figma_create_image,
+  figma_get_image_data,
+  figma_set_text_range_style,
+  figma_clone_node,
+  figma_list_fonts,
 ];
 
 const toolHandlers: Map<string, ToolHandler> = new Map(

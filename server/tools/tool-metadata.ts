@@ -146,6 +146,13 @@ export const toolMetadata: ToolMetadata[] = [
     required: ['componentId'],
   },
 
+  {
+    name: 'figma_component_from_node',
+    description: 'Convert an existing node (frame, group, etc.) into a reusable component. The original node is replaced by the new component. Useful for turning a designed element into a reusable template.',
+    commandType: 'COMPONENT_FROM_NODE',
+    dataType: 'ComponentFromNodeData',
+  },
+
   // ============ Boolean Operations ============
   {
     name: 'figma_boolean_union',
@@ -287,6 +294,79 @@ export const toolMetadata: ToolMetadata[] = [
     commandType: 'SET_GRADIENT_FILL',
     dataType: 'SetGradientFillData',
     required: ['type', 'gradientStops'],
+  },
+  {
+    name: 'figma_set_fills',
+    description: 'Set the fill paints of an existing node. Replaces all existing fills with the provided array of paint objects.',
+    commandType: 'SET_FILLS',
+    dataType: 'SetFillsData',
+    required: ['fills'],
+  },
+  {
+    name: 'figma_set_strokes',
+    description: 'Set the stroke paints and properties of an existing node. Configure stroke color, weight, alignment, and dash patterns.',
+    commandType: 'SET_STROKES',
+    dataType: 'SetStrokesData',
+    required: ['strokes'],
+  },
+  {
+    name: 'figma_set_layout',
+    description: 'Configure auto-layout on a frame. Set direction, spacing, padding, and alignment for automatic child arrangement.',
+    commandType: 'SET_LAYOUT',
+    dataType: 'SetLayoutData',
+  },
+  {
+    name: 'figma_set_mask',
+    description: 'Set whether a node acts as a mask for its siblings below it in the layer hierarchy. Masked siblings are clipped to the mask shape.',
+    commandType: 'SET_MASK',
+    dataType: 'SetMaskData',
+    required: ['isMask'],
+  },
+  {
+    name: 'figma_set_transform',
+    description: 'Set the rotation angle or full transform matrix of a node. Use for precise positioning and rotation.',
+    commandType: 'SET_TRANSFORM',
+    dataType: 'SetTransformData',
+  },
+  {
+    name: 'figma_set_image_fill',
+    description: 'Apply an image as a fill to a node. Provide base64 image data, an existing image hash, or a URL. Supports various scale modes.',
+    commandType: 'SET_IMAGE_FILL',
+    dataType: 'SetImageFillData',
+  },
+  {
+    name: 'figma_create_image',
+    description: 'Upload an image to the Figma file from base64 data. Returns an image hash that can be used in image fills.',
+    commandType: 'CREATE_IMAGE',
+    dataType: 'CreateImageData',
+    required: ['imageData'],
+  },
+  {
+    name: 'figma_get_image_data',
+    description: 'Get the base64 image data for an image by its hash or from a node\'s image fill.',
+    commandType: 'GET_IMAGE_DATA',
+    dataType: 'GetImageData',
+    isFetchCommand: true,
+  },
+  {
+    name: 'figma_set_text_range_style',
+    description: 'Apply different styles to specific character ranges within a text node. Useful for mixed formatting like bold words or colored text.',
+    commandType: 'SET_TEXT_RANGE_STYLE',
+    dataType: 'TextRangeStyleData',
+    required: ['ranges'],
+  },
+  {
+    name: 'figma_clone_node',
+    description: 'Create a duplicate of an existing node. The clone can be positioned and parented independently.',
+    commandType: 'CLONE_NODE',
+    dataType: 'CloneNodeData',
+  },
+  {
+    name: 'figma_list_fonts',
+    description: 'List all available fonts in the Figma file. Returns font families and their available styles.',
+    commandType: 'LIST_FONTS',
+    dataType: 'undefined',
+    isFetchCommand: true,
   },
 
   // ============ Viewport and Selection ============

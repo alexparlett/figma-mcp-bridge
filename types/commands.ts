@@ -21,7 +21,6 @@ import type {
   TextData,
   ComponentData,
   InstanceData,
-  GroupData,
   BooleanOperationData,
   NodeRefData,
   StyleData,
@@ -70,7 +69,6 @@ export type {
   TextData,
   ComponentData,
   InstanceData,
-  GroupData,
   BooleanOperationData,
   NodeRefData,
   StyleData,
@@ -125,7 +123,6 @@ export interface CommandDataMap {
   CREATE_TEXT: TextData;
   CREATE_COMPONENT: ComponentData;
   CREATE_INSTANCE: InstanceData;
-  CREATE_GROUP: GroupData;
 
   // Boolean operations
   BOOLEAN_UNION: BooleanOperationData;
