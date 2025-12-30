@@ -1,0 +1,14 @@
+# Node
+*.log
+*.log.*
+node_modules
+.history/
+.claude/
+
+out/
+dist/
+*.js
+*.d.ts
+*.d.ts.map
+*.js.map
+.DS_Store

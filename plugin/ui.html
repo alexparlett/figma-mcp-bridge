@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: Inter, -apple-system, sans-serif; 
+      font-size: 11px; 
+      color: #e5e5e5; 
+      background: #2c2c2c;
+      overflow: hidden;
+    }
+    
+    /* Compact header - always visible */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      background: #1e1e1e;
+      cursor: pointer;
+      user-select: none;
+    }
+    .header:hover { background: #252525; }
+    
+    .status-dot { 
+      width: 8px; 
+      height: 8px; 
+      border-radius: 50%; 
+      background: #666;
+      flex-shrink: 0;
+    }
+    .status-dot.connected { background: #4caf50; }
+    .status-dot.connecting { background: #ff9800; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    
+    .header-title { font-weight: 600; font-size: 11px; }
+    .header-stats { 
+      flex: 1; 
+      text-align: right; 
+      font-size: 10px; 
+      color: #888;
+      font-family: monospace;
+    }
+    .expand-icon {
+      color: #666;
+      font-size: 8px;
+      transition: transform 0.2s;
+    }
+    .expanded .expand-icon { transform: rotate(180deg); }
+    
+    /* Collapsible content */
+    .content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.2s ease-out;
+      background: #252525;
+    }
+    .expanded .content {
+      max-height: 300px;
+    }
+    
+    .log {
+      height: 80px;
+      overflow-y: auto;
+      padding: 6px 10px;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 9px;
+      background: #1a1a1a;
+    }
+    .log-entry { 
+      padding: 2px 0; 
+      color: #888;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .log-entry.error { color: #f44336; }
+    .log-entry.success { color: #4caf50; }
+    .log-entry .time { color: #555; margin-right: 6px; }
+    
+    .actions {
+      display: flex;
+      gap: 6px;
+      padding: 6px 10px;
+      border-top: 1px solid #333;
+    }
+    .btn {
+      flex: 1;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-primary { background: #3da58e; color: #fff; }
+    .btn-primary:hover { background: #4db89f; }
+    .btn-secondary { background: #3c3c3c; color: #ccc; }
+    .btn-secondary:hover { background: #4a4a4a; }
+    
+    .url-row {
+      display: flex;
+      gap: 6px;
+      padding: 6px 10px;
+      border-bottom: 1px solid #333;
+    }
+    .url-row input {
+      flex: 1;
+      padding: 4px 8px;
+      border: 1px solid #444;
+      border-radius: 3px;
+      background: #1a1a1a;
+      color: #e5e5e5;
+      font-size: 10px;
+      font-family: monospace;
+    }
+    .url-row input:focus { outline: none; border-color: #3da58e; }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #1a1a1a; }
+    ::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div class="header" onclick="toggleExpand()">
+      <div class="status-dot" id="statusDot"></div>
+      <span class="header-title">Claude Bridge</span>
+      <span class="header-stats" id="stats">-</span>
+      <span class="expand-icon">▼</span>
+    </div>
+    
+    <div class="content">
+      <div class="url-row">
+        <input type="text" id="bridgeUrl" value="ws://localhost:3456" placeholder="Bridge URL">
+      </div>
+      <div class="log" id="log"></div>
+      <div class="actions">
+        <button class="btn btn-secondary" onclick="clearLog()">Clear</button>
+        <button class="btn btn-primary" id="connectBtn" onclick="toggleConnection(event)">Connect</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var container = document.getElementById('container');
+    var statusDot = document.getElementById('statusDot');
+    var statsEl = document.getElementById('stats');
+    var connectBtn = document.getElementById('connectBtn');
+    var logEl = document.getElementById('log');
+    var bridgeUrlInput = document.getElementById('bridgeUrl');
+    
+    var ws = null;
+    var isConnected = false;
+    var isExpanded = false;
+    var reconnectTimer = null;
+    var pollTimer = null;
+    var cmdCount = 0;
+    var nodeCount = 0;
+    
+    function toggleExpand() {
+      isExpanded = !isExpanded;
+      container.className = isExpanded ? 'expanded' : '';
+      parent.postMessage({ pluginMessage: { type: 'resize', height: isExpanded ? 180 : 28 } }, '*');
+    }
+    
+    function updateStats() {
+      statsEl.textContent = nodeCount + ' nodes | ' + cmdCount + ' cmds';
+    }
+    
+    function log(msg, type) {
+      var entry = document.createElement('div');
+      entry.className = 'log-entry' + (type ? ' ' + type : '');
+      var time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      entry.innerHTML = '<span class="time">' + time + '</span>' + msg;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+      while (logEl.children.length > 50) logEl.removeChild(logEl.firstChild);
+    }
+    
+    function clearLog() {
+      logEl.innerHTML = '';
+      cmdCount = 0;
+      nodeCount = 0;
+      updateStats();
+    }
+    
+    function setStatus(status) {
+      statusDot.className = 'status-dot' + (status ? ' ' + status : '');
+      connectBtn.textContent = isConnected ? 'Disconnect' : 'Connect';
+    }
+    
+    function connect() {
+      var url = bridgeUrlInput.value;
+      if (ws) ws.close();
+      setStatus('connecting');
+      log('Connecting...');
+      
+      try {
+        ws = new WebSocket(url);
+        ws.onopen = function() {
+          isConnected = true;
+          setStatus('connected');
+          log('Connected', 'success');
+          startPolling();
+        };
+        ws.onmessage = function(event) {
+          try {
+            var msg = JSON.parse(event.data);
+            if (msg.type === 'commands' && msg.commands) {
+              cmdCount += msg.commands.length;
+              updateStats();
+              log('← ' + msg.commands.length + ' cmd(s)');
+              executeCommands(msg.commands, function(results) {
+                ws.send(JSON.stringify({ type: 'results', results: results }));
+              });
+            }
+          } catch (e) { log('Parse error', 'error'); }
+        };
+        ws.onclose = function() {
+          isConnected = false;
+          setStatus('');
+          log('Disconnected');
+          stopPolling();
+          reconnectTimer = setTimeout(function() { if (!isConnected) connect(); }, 3000);
+        };
+        ws.onerror = function() { startPolling(); };
+      } catch (e) {
+        log('Error: ' + e.message, 'error');
+        setStatus('');
+        startPolling();
+      }
+    }
+    
+    function disconnect() {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      stopPolling();
+      if (ws) ws.close();
+    }
+    
+    function toggleConnection(e) {
+      e.stopPropagation();
+      if (isConnected) disconnect(); else connect();
+    }
+    
+    function startPolling() {
+      if (pollTimer) return;
+      var baseUrl = bridgeUrlInput.value.replace('ws://', 'http://').replace('wss://', 'https://');
+      pollTimer = setInterval(function() {
+        fetch(baseUrl + '/commands').then(function(r) { return r.json(); }).then(function(data) {
+          if (data.commands && data.commands.length > 0) {
+            cmdCount += data.commands.length;
+            updateStats();
+            log('← ' + data.commands.length + ' cmd(s) [poll]');
+            executeCommands(data.commands, function(results) {
+              fetch(baseUrl + '/results', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ results: results }) });
+            });
+          }
+        }).catch(function() {});
+      }, 1000);
+    }
+    
+    function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+    
+    function executeCommands(commands, callback) {
+      parent.postMessage({ pluginMessage: { type: 'execute-commands', commands: commands } }, '*');
+      if (callback) window._pendingCallback = callback;
+    }
+    
+    window.onmessage = function(event) {
+      var msg = event.data.pluginMessage;
+      if (!msg) return;
+      if (msg.type === 'success') {
+        var ok = msg.results.filter(function(r) { return r.success; }).length;
+        var fail = msg.results.length - ok;
+        nodeCount += ok;
+        updateStats();
+        log('→ ' + ok + ' ok' + (fail ? ', ' + fail + ' fail' : ''), fail ? 'error' : 'success');
+        if (window._pendingCallback) { window._pendingCallback(msg.results); window._pendingCallback = null; }
+      } else if (msg.type === 'error') {
+        log('Error: ' + msg.message, 'error');
+      }
+    };
+    
+    updateStats();
+    setTimeout(connect, 300);
+  </script>
+</body>
+</html>

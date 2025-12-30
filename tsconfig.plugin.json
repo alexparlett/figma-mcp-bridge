@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "declaration": false,
+    "declarationMap": false,
+    "lib": [
+      "ES2017"
+    ],
+    "module": "None",
+    "skipLibCheck": true,
+    "sourceMap": false,
+    "strict": true,
+    "target": "ES6",
+    "typeRoots": [
+      "./node_modules/@types",
+      "./node_modules/@figma"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "../types/types.js": ["./types/types.ts"]
+    }
+  },
+  "exclude": [
+    "node_modules"
+  ],
+  "include": [
+    "plugin/**/*.ts",
+    "types/**/*.ts"
+  ]
+}
