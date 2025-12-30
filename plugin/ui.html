@@ -155,7 +155,6 @@
     var isConnected = false;
     var isExpanded = false;
     var reconnectTimer = null;
-    var pollTimer = null;
     var cmdCount = 0;
     var nodeCount = 0;
     
@@ -196,14 +195,13 @@
       if (ws) ws.close();
       setStatus('connecting');
       log('Connecting...');
-      
+
       try {
         ws = new WebSocket(url);
         ws.onopen = function() {
           isConnected = true;
           setStatus('connected');
           log('Connected', 'success');
-          startPolling();
         };
         ws.onmessage = function(event) {
           try {
@@ -222,46 +220,26 @@
           isConnected = false;
           setStatus('');
           log('Disconnected');
-          stopPolling();
           reconnectTimer = setTimeout(function() { if (!isConnected) connect(); }, 3000);
         };
-        ws.onerror = function() { startPolling(); };
+        ws.onerror = function(e) {
+          log('Connection error', 'error');
+        };
       } catch (e) {
         log('Error: ' + e.message, 'error');
         setStatus('');
-        startPolling();
       }
     }
-    
+
     function disconnect() {
       if (reconnectTimer) clearTimeout(reconnectTimer);
-      stopPolling();
       if (ws) ws.close();
     }
-    
+
     function toggleConnection(e) {
       e.stopPropagation();
       if (isConnected) disconnect(); else connect();
     }
-    
-    function startPolling() {
-      if (pollTimer) return;
-      var baseUrl = bridgeUrlInput.value.replace('ws://', 'http://').replace('wss://', 'https://');
-      pollTimer = setInterval(function() {
-        fetch(baseUrl + '/commands').then(function(r) { return r.json(); }).then(function(data) {
-          if (data.commands && data.commands.length > 0) {
-            cmdCount += data.commands.length;
-            updateStats();
-            log('← ' + data.commands.length + ' cmd(s) [poll]');
-            executeCommands(data.commands, function(results) {
-              fetch(baseUrl + '/results', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ results: results }) });
-            });
-          }
-        }).catch(function() {});
-      }, 1000);
-    }
-    
-    function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
     
     function executeCommands(commands, callback) {
       parent.postMessage({ pluginMessage: { type: 'execute-commands', commands: commands } }, '*');

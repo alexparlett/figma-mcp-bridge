@@ -206,7 +206,6 @@ export interface ExportNodeData extends NodeRefData {
 
 // ============ Base Command (shared fields) ============
 interface BaseCommand {
-  _cmdId?: string;
   id?: string;
   children?: Command[];
 }
@@ -294,12 +293,15 @@ export interface SerializedNode {
   children?: SerializedNode[];
 }
 
+// ============ Tagged Command (with internal tracking ID) ============
+export type TaggedCommand = Command & { _cmdId: string };
+
 // ============ WebSocket Message Types ============
 export type WebSocketMessageType = 'commands' | 'results';
 
 export interface WebSocketMessage {
   type: WebSocketMessageType;
-  commands?: Command[];
+  commands?: TaggedCommand[];
   results?: CommandResult[];
 }
 
