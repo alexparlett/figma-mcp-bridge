@@ -350,7 +350,10 @@ function createRectangle(cmd: Command): RectangleNode {
   rect.y = defaultVal(cmd.y, 0);
   rect.resize(defaultVal(cmd.width, 100), defaultVal(cmd.height, 100));
 
-  if (cmd.fillColor || cmd.fill) {
+  // Check fills array first (supports style references)
+  if (cmd.fills) {
+    applyFills(rect, cmd.fills);
+  } else if (cmd.fillColor || cmd.fill) {
     rect.fills = solidPaint(cmd.fillColor || cmd.fill!);
   }
 
@@ -383,7 +386,10 @@ function createEllipse(cmd: Command): EllipseNode {
   ellipse.y = defaultVal(cmd.y, 0);
   ellipse.resize(defaultVal(cmd.width, 100), defaultVal(cmd.height, 100));
 
-  if (cmd.fillColor || cmd.fill) {
+  // Check fills array first (supports style references)
+  if (cmd.fills) {
+    applyFills(ellipse, cmd.fills);
+  } else if (cmd.fillColor || cmd.fill) {
     ellipse.fills = solidPaint(cmd.fillColor || cmd.fill!);
   }
 
@@ -434,7 +440,10 @@ function createText(cmd: Command): Promise<TextNode> {
       if (cmd.textAlignHorizontal) text.textAlignHorizontal = cmd.textAlignHorizontal;
       if (cmd.textAlignVertical) text.textAlignVertical = cmd.textAlignVertical;
 
-      if (cmd.fill) {
+      // Check fills array first (supports style references)
+      if (cmd.fills) {
+        applyFills(text, cmd.fills);
+      } else if (cmd.fill) {
         text.fills = solidPaint(cmd.fill);
       }
 
@@ -458,7 +467,10 @@ function createText(cmd: Command): Promise<TextNode> {
         text.characters = defaultVal(cmd.text, '');
 
         if (cmd.fontSize) text.fontSize = cmd.fontSize;
-        if (cmd.fill) {
+        // Check fills array first (supports style references)
+        if (cmd.fills) {
+          applyFills(text, cmd.fills);
+        } else if (cmd.fill) {
           text.fills = solidPaint(cmd.fill);
         }
 
