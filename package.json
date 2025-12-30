@@ -12,6 +12,7 @@
     "build:server": "tsc -p tsconfig.server.json",
     "build:plugin": "npm run generate:props && tsc -p tsconfig.plugin.json --noEmit && esbuild plugin/code.ts --bundle --outfile=dist/plugin/code.js --target=es6 --format=iife && cp plugin/ui.html dist/plugin/ && cp plugin/manifest.json dist/plugin/",
     "generate:props": "npx tsx scripts/generate-serializable-props.ts",
+    "generate:schemas": "npx tsx scripts/generate-schemas.ts",
     "watch": "concurrently \"npm run watch:server\" \"npm run watch:plugin\"",
     "watch:server": "tsc -p tsconfig.server.json --watch",
     "watch:plugin": "esbuild plugin/code.ts --bundle --outfile=dist/plugin/code.js --target=es6 --format=iife --watch",

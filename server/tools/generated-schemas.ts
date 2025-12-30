@@ -8678,6 +8678,30 @@ export const generatedTools: ToolSchema[] = [
         }
     },
   },
+  // figma_component_from_node
+  {
+    name: "figma_component_from_node",
+    description: "Convert an existing node (frame, group, etc.) into a reusable component. The original node is replaced by the new component. Useful for turning a designed element into a reusable template.",
+    commandType: "COMPONENT_FROM_NODE" as CommandType,
+    inputSchema: {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "nodeId": {
+                "type": "string"
+            },
+            "name": {
+                "type": "string"
+            },
+            "id": {
+                "type": "string"
+            }
+        },
+        "additionalProperties": false,
+        "description": "Convert an existing node into a component.",
+        "definitions": {}
+    },
+  },
   // figma_boolean_union
   {
     name: "figma_boolean_union",
@@ -11819,6 +11843,1137 @@ export const generatedTools: ToolSchema[] = [
         }
     },
   },
+  // figma_set_fills
+  {
+    name: "figma_set_fills",
+    description: "Set the fill paints of an existing node. Replaces all existing fills with the provided array of paint objects.",
+    commandType: "SET_FILLS" as CommandType,
+    inputSchema: {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "nodeId": {
+                "type": "string"
+            },
+            "name": {
+                "type": "string"
+            },
+            "fills": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/definitions/PaintInput"
+                }
+            },
+            "fillStyleId": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "fills"
+        ],
+        "additionalProperties": false,
+        "description": "Set the fills of an existing node.",
+        "definitions": {
+            "PaintInput": {
+                "anyOf": [
+                    {
+                        "$ref": "#/definitions/SolidPaintInput"
+                    },
+                    {
+                        "$ref": "#/definitions/GradientPaintInput"
+                    },
+                    {
+                        "$ref": "#/definitions/ImagePaintInput"
+                    },
+                    {
+                        "$ref": "#/definitions/VideoPaintInput"
+                    }
+                ]
+            },
+            "SolidPaintInput": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "const": "SOLID"
+                    },
+                    "color": {
+                        "$ref": "#/definitions/ColorInput"
+                    },
+                    "visible": {
+                        "type": "boolean"
+                    },
+                    "opacity": {
+                        "type": "number"
+                    },
+                    "blendMode": {
+                        "$ref": "#/definitions/BlendMode"
+                    }
+                },
+                "required": [
+                    "color"
+                ],
+                "additionalProperties": false
+            },
+            "ColorInput": {
+                "anyOf": [
+                    {
+                        "type": "string"
+                    },
+                    {
+                        "$ref": "#/definitions/RGB"
+                    },
+                    {
+                        "$ref": "#/definitions/RGBA"
+                    }
+                ]
+            },
+            "RGB": {
+                "type": "object",
+                "properties": {
+                    "r": {
+                        "type": "number"
+                    },
+                    "g": {
+                        "type": "number"
+                    },
+                    "b": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "r",
+                    "g",
+                    "b"
+                ],
+                "additionalProperties": false
+            },
+            "RGBA": {
+                "type": "object",
+                "properties": {
+                    "r": {
+                        "type": "number"
+                    },
+                    "g": {
+                        "type": "number"
+                    },
+                    "b": {
+                        "type": "number"
+                    },
+                    "a": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "a",
+                    "b",
+                    "g",
+                    "r"
+                ],
+                "additionalProperties": false
+            },
+            "BlendMode": {
+                "type": "string",
+                "enum": [
+                    "PASS_THROUGH",
+                    "NORMAL",
+                    "DARKEN",
+                    "MULTIPLY",
+                    "LINEAR_BURN",
+                    "COLOR_BURN",
+                    "LIGHTEN",
+                    "SCREEN",
+                    "LINEAR_DODGE",
+                    "COLOR_DODGE",
+                    "OVERLAY",
+                    "SOFT_LIGHT",
+                    "HARD_LIGHT",
+                    "DIFFERENCE",
+                    "EXCLUSION",
+                    "HUE",
+                    "SATURATION",
+                    "COLOR",
+                    "LUMINOSITY"
+                ]
+            },
+            "GradientPaintInput": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "GRADIENT_LINEAR",
+                            "GRADIENT_RADIAL",
+                            "GRADIENT_ANGULAR",
+                            "GRADIENT_DIAMOND"
+                        ]
+                    },
+                    "gradientStops": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/GradientStop"
+                        }
+                    },
+                    "gradientTransform": {
+                        "$ref": "#/definitions/Transform"
+                    },
+                    "visible": {
+                        "type": "boolean"
+                    },
+                    "opacity": {
+                        "type": "number"
+                    },
+                    "blendMode": {
+                        "$ref": "#/definitions/BlendMode"
+                    }
+                },
+                "required": [
+                    "type",
+                    "gradientStops"
+                ],
+                "additionalProperties": false
+            },
+            "GradientStop": {
+                "type": "object",
+                "properties": {
+                    "position": {
+                        "type": "number"
+                    },
+                    "color": {
+                        "$ref": "#/definitions/ColorInput"
+                    }
+                },
+                "required": [
+                    "position",
+                    "color"
+                ],
+                "additionalProperties": false
+            },
+            "Transform": {
+                "type": "array",
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
+                },
+                "minItems": 2,
+                "maxItems": 2
+            },
+            "ImagePaintInput": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "const": "IMAGE"
+                    },
+                    "imageData": {
+                        "type": "string"
+                    },
+                    "imageHash": {
+                        "type": "string"
+                    },
+                    "scaleMode": {
+                        "type": "string",
+                        "enum": [
+                            "FILL",
+                            "FIT",
+                            "CROP",
+                            "TILE"
+                        ]
+                    },
+                    "imageTransform": {
+                        "$ref": "#/definitions/Transform"
+                    },
+                    "scalingFactor": {
+                        "type": "number"
+                    },
+                    "rotation": {
+                        "type": "number"
+                    },
+                    "visible": {
+                        "type": "boolean"
+                    },
+                    "opacity": {
+                        "type": "number"
+                    },
+                    "blendMode": {
+                        "$ref": "#/definitions/BlendMode"
+                    }
+                },
+                "required": [
+                    "type"
+                ],
+                "additionalProperties": false
+            },
+            "VideoPaintInput": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "const": "VIDEO"
+                    },
+                    "videoHash": {
+                        "type": "string"
+                    },
+                    "scaleMode": {
+                        "type": "string",
+                        "enum": [
+                            "FILL",
+                            "FIT",
+                            "CROP",
+                            "TILE"
+                        ]
+                    },
+                    "visible": {
+                        "type": "boolean"
+                    },
+                    "opacity": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "type",
+                    "videoHash"
+                ],
+                "additionalProperties": false
+            }
+        }
+    },
+  },
+  // figma_set_strokes
+  {
+    name: "figma_set_strokes",
+    description: "Set the stroke paints and properties of an existing node. Configure stroke color, weight, alignment, and dash patterns.",
+    commandType: "SET_STROKES" as CommandType,
+    inputSchema: {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "nodeId": {
+                "type": "string"
+            },
+            "name": {
+                "type": "string"
+            },
+            "strokes": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/definitions/PaintInput"
+                }
+            },
+            "strokeStyleId": {
+                "type": "string"
+            },
+            "strokeWeight": {
+                "type": "number"
+            },
+            "strokeAlign": {
+                "$ref": "#/definitions/StrokeAlign"
+            },
+            "strokeCap": {
+                "$ref": "#/definitions/StrokeCap"
+            },
+            "strokeJoin": {
+                "$ref": "#/definitions/StrokeJoin"
+            },
+            "dashPattern": {
+                "type": "array",
+                "items": {
+                    "type": "number"
+                }
+            }
+        },
+        "required": [
+            "strokes"
+        ],
+        "additionalProperties": false,
+        "description": "Set the strokes of an existing node.",
+        "definitions": {
+            "PaintInput": {
+                "anyOf": [
+                    {
+                        "$ref": "#/definitions/SolidPaintInput"
+                    },
+                    {
+                        "$ref": "#/definitions/GradientPaintInput"
+                    },
+                    {
+                        "$ref": "#/definitions/ImagePaintInput"
+                    },
+                    {
+                        "$ref": "#/definitions/VideoPaintInput"
+                    }
+                ]
+            },
+            "SolidPaintInput": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "const": "SOLID"
+                    },
+                    "color": {
+                        "$ref": "#/definitions/ColorInput"
+                    },
+                    "visible": {
+                        "type": "boolean"
+                    },
+                    "opacity": {
+                        "type": "number"
+                    },
+                    "blendMode": {
+                        "$ref": "#/definitions/BlendMode"
+                    }
+                },
+                "required": [
+                    "color"
+                ],
+                "additionalProperties": false
+            },
+            "ColorInput": {
+                "anyOf": [
+                    {
+                        "type": "string"
+                    },
+                    {
+                        "$ref": "#/definitions/RGB"
+                    },
+                    {
+                        "$ref": "#/definitions/RGBA"
+                    }
+                ]
+            },
+            "RGB": {
+                "type": "object",
+                "properties": {
+                    "r": {
+                        "type": "number"
+                    },
+                    "g": {
+                        "type": "number"
+                    },
+                    "b": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "r",
+                    "g",
+                    "b"
+                ],
+                "additionalProperties": false
+            },
+            "RGBA": {
+                "type": "object",
+                "properties": {
+                    "r": {
+                        "type": "number"
+                    },
+                    "g": {
+                        "type": "number"
+                    },
+                    "b": {
+                        "type": "number"
+                    },
+                    "a": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "a",
+                    "b",
+                    "g",
+                    "r"
+                ],
+                "additionalProperties": false
+            },
+            "BlendMode": {
+                "type": "string",
+                "enum": [
+                    "PASS_THROUGH",
+                    "NORMAL",
+                    "DARKEN",
+                    "MULTIPLY",
+                    "LINEAR_BURN",
+                    "COLOR_BURN",
+                    "LIGHTEN",
+                    "SCREEN",
+                    "LINEAR_DODGE",
+                    "COLOR_DODGE",
+                    "OVERLAY",
+                    "SOFT_LIGHT",
+                    "HARD_LIGHT",
+                    "DIFFERENCE",
+                    "EXCLUSION",
+                    "HUE",
+                    "SATURATION",
+                    "COLOR",
+                    "LUMINOSITY"
+                ]
+            },
+            "GradientPaintInput": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "GRADIENT_LINEAR",
+                            "GRADIENT_RADIAL",
+                            "GRADIENT_ANGULAR",
+                            "GRADIENT_DIAMOND"
+                        ]
+                    },
+                    "gradientStops": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/GradientStop"
+                        }
+                    },
+                    "gradientTransform": {
+                        "$ref": "#/definitions/Transform"
+                    },
+                    "visible": {
+                        "type": "boolean"
+                    },
+                    "opacity": {
+                        "type": "number"
+                    },
+                    "blendMode": {
+                        "$ref": "#/definitions/BlendMode"
+                    }
+                },
+                "required": [
+                    "type",
+                    "gradientStops"
+                ],
+                "additionalProperties": false
+            },
+            "GradientStop": {
+                "type": "object",
+                "properties": {
+                    "position": {
+                        "type": "number"
+                    },
+                    "color": {
+                        "$ref": "#/definitions/ColorInput"
+                    }
+                },
+                "required": [
+                    "position",
+                    "color"
+                ],
+                "additionalProperties": false
+            },
+            "Transform": {
+                "type": "array",
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
+                },
+                "minItems": 2,
+                "maxItems": 2
+            },
+            "ImagePaintInput": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "const": "IMAGE"
+                    },
+                    "imageData": {
+                        "type": "string"
+                    },
+                    "imageHash": {
+                        "type": "string"
+                    },
+                    "scaleMode": {
+                        "type": "string",
+                        "enum": [
+                            "FILL",
+                            "FIT",
+                            "CROP",
+                            "TILE"
+                        ]
+                    },
+                    "imageTransform": {
+                        "$ref": "#/definitions/Transform"
+                    },
+                    "scalingFactor": {
+                        "type": "number"
+                    },
+                    "rotation": {
+                        "type": "number"
+                    },
+                    "visible": {
+                        "type": "boolean"
+                    },
+                    "opacity": {
+                        "type": "number"
+                    },
+                    "blendMode": {
+                        "$ref": "#/definitions/BlendMode"
+                    }
+                },
+                "required": [
+                    "type"
+                ],
+                "additionalProperties": false
+            },
+            "VideoPaintInput": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "const": "VIDEO"
+                    },
+                    "videoHash": {
+                        "type": "string"
+                    },
+                    "scaleMode": {
+                        "type": "string",
+                        "enum": [
+                            "FILL",
+                            "FIT",
+                            "CROP",
+                            "TILE"
+                        ]
+                    },
+                    "visible": {
+                        "type": "boolean"
+                    },
+                    "opacity": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "type",
+                    "videoHash"
+                ],
+                "additionalProperties": false
+            },
+            "StrokeAlign": {
+                "type": "string",
+                "enum": [
+                    "INSIDE",
+                    "OUTSIDE",
+                    "CENTER"
+                ]
+            },
+            "StrokeCap": {
+                "type": "string",
+                "enum": [
+                    "NONE",
+                    "ROUND",
+                    "SQUARE",
+                    "ARROW_LINES",
+                    "ARROW_EQUILATERAL"
+                ]
+            },
+            "StrokeJoin": {
+                "type": "string",
+                "enum": [
+                    "MITER",
+                    "BEVEL",
+                    "ROUND"
+                ]
+            }
+        }
+    },
+  },
+  // figma_set_layout
+  {
+    name: "figma_set_layout",
+    description: "Configure auto-layout on a frame. Set direction, spacing, padding, and alignment for automatic child arrangement.",
+    commandType: "SET_LAYOUT" as CommandType,
+    inputSchema: {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "nodeId": {
+                "type": "string"
+            },
+            "name": {
+                "type": "string"
+            },
+            "direction": {
+                "type": "string",
+                "enum": [
+                    "HORIZONTAL",
+                    "VERTICAL"
+                ]
+            },
+            "gap": {
+                "type": "number"
+            },
+            "padding": {
+                "type": "number"
+            },
+            "paddingTop": {
+                "type": "number"
+            },
+            "paddingRight": {
+                "type": "number"
+            },
+            "paddingBottom": {
+                "type": "number"
+            },
+            "paddingLeft": {
+                "type": "number"
+            },
+            "primaryAlign": {
+                "type": "string",
+                "enum": [
+                    "MIN",
+                    "CENTER",
+                    "MAX",
+                    "SPACE_BETWEEN"
+                ]
+            },
+            "counterAlign": {
+                "type": "string",
+                "enum": [
+                    "MIN",
+                    "CENTER",
+                    "MAX",
+                    "BASELINE"
+                ]
+            },
+            "wrap": {
+                "type": "string",
+                "enum": [
+                    "NO_WRAP",
+                    "WRAP"
+                ]
+            },
+            "counterAxisSpacing": {
+                "type": "number"
+            },
+            "primaryAxisSizing": {
+                "type": "string",
+                "enum": [
+                    "FIXED",
+                    "AUTO"
+                ]
+            },
+            "counterAxisSizing": {
+                "type": "string",
+                "enum": [
+                    "FIXED",
+                    "AUTO"
+                ]
+            }
+        },
+        "additionalProperties": false,
+        "description": "Configure auto-layout on a frame.",
+        "definitions": {}
+    },
+  },
+  // figma_set_mask
+  {
+    name: "figma_set_mask",
+    description: "Set whether a node acts as a mask for its siblings below it in the layer hierarchy. Masked siblings are clipped to the mask shape.",
+    commandType: "SET_MASK" as CommandType,
+    inputSchema: {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "nodeId": {
+                "type": "string"
+            },
+            "name": {
+                "type": "string"
+            },
+            "isMask": {
+                "type": "boolean"
+            },
+            "maskType": {
+                "type": "string",
+                "enum": [
+                    "ALPHA",
+                    "VECTOR",
+                    "LUMINANCE"
+                ]
+            }
+        },
+        "required": [
+            "isMask"
+        ],
+        "additionalProperties": false,
+        "description": "Set whether a node acts as a mask for its siblings.",
+        "definitions": {}
+    },
+  },
+  // figma_set_transform
+  {
+    name: "figma_set_transform",
+    description: "Set the rotation angle or full transform matrix of a node. Use for precise positioning and rotation.",
+    commandType: "SET_TRANSFORM" as CommandType,
+    inputSchema: {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "nodeId": {
+                "type": "string"
+            },
+            "name": {
+                "type": "string"
+            },
+            "rotation": {
+                "type": "number"
+            },
+            "transform": {
+                "$ref": "#/definitions/Transform"
+            }
+        },
+        "additionalProperties": false,
+        "description": "Set the rotation or transform matrix of a node.",
+        "definitions": {
+            "Transform": {
+                "type": "array",
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
+                },
+                "minItems": 2,
+                "maxItems": 2
+            }
+        }
+    },
+  },
+  // figma_set_image_fill
+  {
+    name: "figma_set_image_fill",
+    description: "Apply an image as a fill to a node. Provide base64 image data, an existing image hash, or a URL. Supports various scale modes.",
+    commandType: "SET_IMAGE_FILL" as CommandType,
+    inputSchema: {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "nodeId": {
+                "type": "string"
+            },
+            "name": {
+                "type": "string"
+            },
+            "imageData": {
+                "type": "string"
+            },
+            "imageHash": {
+                "type": "string"
+            },
+            "imageUrl": {
+                "type": "string"
+            },
+            "scaleMode": {
+                "type": "string",
+                "enum": [
+                    "FILL",
+                    "FIT",
+                    "CROP",
+                    "TILE"
+                ]
+            },
+            "imageTransform": {
+                "type": "array",
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
+                },
+                "minItems": 2,
+                "maxItems": 2
+            },
+            "scalingFactor": {
+                "type": "number"
+            },
+            "rotation": {
+                "type": "number"
+            },
+            "visible": {
+                "type": "boolean"
+            },
+            "opacity": {
+                "type": "number"
+            },
+            "append": {
+                "type": "boolean"
+            }
+        },
+        "additionalProperties": false,
+        "description": "Set an image fill on a node. Provide base64 image data, an existing image hash, or a URL.",
+        "definitions": {}
+    },
+  },
+  // figma_create_image
+  {
+    name: "figma_create_image",
+    description: "Upload an image to the Figma file from base64 data. Returns an image hash that can be used in image fills.",
+    commandType: "CREATE_IMAGE" as CommandType,
+    inputSchema: {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "imageData": {
+                "type": "string"
+            },
+            "id": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "imageData"
+        ],
+        "additionalProperties": false,
+        "description": "Create an image in the Figma file from base64 data.",
+        "definitions": {}
+    },
+  },
+  // figma_get_image_data
+  {
+    name: "figma_get_image_data",
+    description: "Get the base64 image data for an image by its hash or from a node's image fill.",
+    commandType: "GET_IMAGE_DATA" as CommandType,
+    inputSchema: {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "imageHash": {
+                "type": "string"
+            },
+            "nodeId": {
+                "type": "string"
+            }
+        },
+        "additionalProperties": false,
+        "description": "Get image data by hash or from a node's fill.",
+        "definitions": {}
+    },
+    isFetchCommand: true,
+  },
+  // figma_set_text_range_style
+  {
+    name: "figma_set_text_range_style",
+    description: "Apply different styles to specific character ranges within a text node. Useful for mixed formatting like bold words or colored text.",
+    commandType: "SET_TEXT_RANGE_STYLE" as CommandType,
+    inputSchema: {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "nodeId": {
+                "type": "string"
+            },
+            "name": {
+                "type": "string"
+            },
+            "ranges": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/definitions/TextRangeStyle"
+                }
+            }
+        },
+        "required": [
+            "ranges"
+        ],
+        "additionalProperties": false,
+        "definitions": {
+            "TextRangeStyle": {
+                "type": "object",
+                "properties": {
+                    "start": {
+                        "type": "number"
+                    },
+                    "end": {
+                        "type": "number"
+                    },
+                    "fontFamily": {
+                        "type": "string"
+                    },
+                    "fontStyle": {
+                        "type": "string"
+                    },
+                    "fontSize": {
+                        "type": "number"
+                    },
+                    "fill": {
+                        "type": "string"
+                    },
+                    "textCase": {
+                        "$ref": "#/definitions/TextCase"
+                    },
+                    "textDecoration": {
+                        "$ref": "#/definitions/TextDecoration"
+                    },
+                    "letterSpacing": {
+                        "anyOf": [
+                            {
+                                "type": "number"
+                            },
+                            {
+                                "$ref": "#/definitions/LetterSpacing"
+                            }
+                        ]
+                    },
+                    "lineHeight": {
+                        "anyOf": [
+                            {
+                                "type": "number"
+                            },
+                            {
+                                "$ref": "#/definitions/LineHeight"
+                            }
+                        ]
+                    },
+                    "hyperlink": {
+                        "$ref": "#/definitions/Hyperlink"
+                    }
+                },
+                "required": [
+                    "start",
+                    "end"
+                ],
+                "additionalProperties": false
+            },
+            "TextCase": {
+                "type": "string",
+                "enum": [
+                    "ORIGINAL",
+                    "UPPER",
+                    "LOWER",
+                    "TITLE",
+                    "SMALL_CAPS",
+                    "SMALL_CAPS_FORCED"
+                ]
+            },
+            "TextDecoration": {
+                "type": "string",
+                "enum": [
+                    "NONE",
+                    "UNDERLINE",
+                    "STRIKETHROUGH"
+                ]
+            },
+            "LetterSpacing": {
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "type": "number"
+                    },
+                    "unit": {
+                        "type": "string",
+                        "enum": [
+                            "PIXELS",
+                            "PERCENT"
+                        ]
+                    }
+                },
+                "required": [
+                    "value",
+                    "unit"
+                ],
+                "additionalProperties": false
+            },
+            "LineHeight": {
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "type": "number"
+                    },
+                    "unit": {
+                        "type": "string",
+                        "enum": [
+                            "PIXELS",
+                            "PERCENT",
+                            "AUTO"
+                        ]
+                    }
+                },
+                "required": [
+                    "unit"
+                ],
+                "additionalProperties": false
+            },
+            "Hyperlink": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "URL",
+                            "NODE"
+                        ]
+                    },
+                    "value": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "type",
+                    "value"
+                ],
+                "additionalProperties": false
+            }
+        }
+    },
+  },
+  // figma_clone_node
+  {
+    name: "figma_clone_node",
+    description: "Create a duplicate of an existing node. The clone can be positioned and parented independently.",
+    commandType: "CLONE_NODE" as CommandType,
+    inputSchema: {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "nodeId": {
+                "type": "string"
+            },
+            "name": {
+                "type": "string"
+            },
+            "id": {
+                "type": "string"
+            },
+            "x": {
+                "type": "number"
+            },
+            "y": {
+                "type": "number"
+            },
+            "parent": {
+                "type": "string"
+            }
+        },
+        "additionalProperties": false,
+        "description": "Clone an existing node.",
+        "definitions": {}
+    },
+  },
+  // figma_list_fonts
+  {
+    name: "figma_list_fonts",
+    description: "List all available fonts in the Figma file. Returns font families and their available styles.",
+    commandType: "LIST_FONTS" as CommandType,
+    inputSchema: {
+        "type": "object",
+        "properties": {}
+    },
+    isFetchCommand: true,
+  },
   // figma_set_selection
   {
     name: "figma_set_selection",
@@ -11934,18 +13089,197 @@ export const generatedTools: ToolSchema[] = [
         "type": "object",
         "properties": {
             "depth": {
-                "type": "number"
+                "type": "number",
+                "description": "Max depth to traverse children. 0 = childIds only (default), 1+ = serialize children (requires compact=false)"
             },
             "filter": {
-                "type": "string"
+                "type": "string",
+                "description": "Filter by node type (e.g., \"FRAME\", \"TEXT\")"
             },
             "register": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "Register nodes in registry for later reference"
+            },
+            "compact": {
+                "type": "boolean",
+                "description": "Compact mode - only essential properties (id, name, type, x, y, width, height, visible, locked). Default: true"
+            },
+            "fields": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/definitions/SerializableProp"
+                },
+                "description": "Specific fields to include (overrides compact/excludeVerbose). E.g., [\"fills\", \"strokes\", \"effects\"]"
+            },
+            "excludeVerbose": {
+                "type": "boolean",
+                "description": "Exclude large properties like absoluteTransform, reactions, vectorNetwork. Default: true"
             }
         },
         "additionalProperties": false,
-        "description": "Query options for retrieving nodes.",
-        "definitions": {}
+        "description": "Query options for retrieving nodes.\n\nBy default, queries return COMPACT data to minimize response size:\n- compact=true (default): Only id, name, type, x, y, width, height, visible, locked, childIds\n- depth=0 (default): Children returned as childIds array only, not fully serialized\n- excludeVerbose=true (default): Large properties like transforms, fills, effects excluded\n\nUse compact=false or fields=[...] to get more properties.\n\nAvailable fields (partial list - use compact=false for all):\n- Layout: x, y, width, height, rotation, constraints, layoutMode, layoutAlign, layoutGrow\n- Visual: fills, strokes, effects, opacity, blendMode, cornerRadius\n- Text: characters, fontSize, fontFamily, fontWeight, textAlignHorizontal\n- Auto-layout: paddingTop/Right/Bottom/Left, itemSpacing, primaryAxisAlignItems\n- Components: componentPropertyDefinitions, mainComponentId, componentProperties",
+        "definitions": {
+            "SerializableProp": {
+                "type": "string",
+                "enum": [
+                    "name",
+                    "visible",
+                    "locked",
+                    "x",
+                    "y",
+                    "width",
+                    "height",
+                    "rotation",
+                    "absoluteTransform",
+                    "relativeTransform",
+                    "absoluteBoundingBox",
+                    "absoluteRenderBounds",
+                    "layoutAlign",
+                    "layoutGrow",
+                    "layoutPositioning",
+                    "constraints",
+                    "opacity",
+                    "blendMode",
+                    "isMask",
+                    "maskType",
+                    "fills",
+                    "fillStyleId",
+                    "fill",
+                    "fillColor",
+                    "strokes",
+                    "strokeStyleId",
+                    "stroke",
+                    "strokeColor",
+                    "strokeWeight",
+                    "strokeAlign",
+                    "strokeCap",
+                    "strokeJoin",
+                    "strokeMiterLimit",
+                    "dashPattern",
+                    "strokeTopWeight",
+                    "strokeRightWeight",
+                    "strokeBottomWeight",
+                    "strokeLeftWeight",
+                    "cornerRadius",
+                    "cornerSmoothing",
+                    "topLeftRadius",
+                    "topRightRadius",
+                    "bottomLeftRadius",
+                    "bottomRightRadius",
+                    "effects",
+                    "effectStyleId",
+                    "layoutMode",
+                    "primaryAxisSizingMode",
+                    "counterAxisSizingMode",
+                    "primaryAxisAlignItems",
+                    "counterAxisAlignItems",
+                    "counterAxisAlignContent",
+                    "paddingTop",
+                    "paddingRight",
+                    "paddingBottom",
+                    "paddingLeft",
+                    "padding",
+                    "itemSpacing",
+                    "counterAxisSpacing",
+                    "gap",
+                    "layoutWrap",
+                    "wrap",
+                    "itemReverseZIndex",
+                    "strokesIncludedInLayout",
+                    "direction",
+                    "align",
+                    "counterAlign",
+                    "layout",
+                    "minWidth",
+                    "maxWidth",
+                    "minHeight",
+                    "maxHeight",
+                    "clipsContent",
+                    "guides",
+                    "layoutGrids",
+                    "gridStyleId",
+                    "characters",
+                    "text",
+                    "fontSize",
+                    "fontFamily",
+                    "fontStyle",
+                    "fontWeight",
+                    "textAlignHorizontal",
+                    "textAlignVertical",
+                    "textAutoResize",
+                    "autoResize",
+                    "paragraphIndent",
+                    "paragraphSpacing",
+                    "lineHeight",
+                    "letterSpacing",
+                    "textCase",
+                    "textDecoration",
+                    "textDecorationStyle",
+                    "textDecorationOffset",
+                    "textDecorationThickness",
+                    "textDecorationColor",
+                    "textDecorationSkipInk",
+                    "textTruncation",
+                    "maxLines",
+                    "hyperlink",
+                    "textStyleId",
+                    "hangingPunctuation",
+                    "hangingList",
+                    "leadingTrim",
+                    "listSpacing",
+                    "autoRename",
+                    "componentPropertyDefinitions",
+                    "description",
+                    "documentationLinks",
+                    "mainComponent",
+                    "mainComponentId",
+                    "mainComponentName",
+                    "componentId",
+                    "componentProperties",
+                    "exposedInstances",
+                    "isExposedInstance",
+                    "overrides",
+                    "scaleFactor",
+                    "swapComponent",
+                    "vectorNetwork",
+                    "vectorPaths",
+                    "handleMirroring",
+                    "pointCount",
+                    "innerRadius",
+                    "arcData",
+                    "length",
+                    "color",
+                    "weight",
+                    "sectionContentsHidden",
+                    "devStatus",
+                    "exportSettings",
+                    "reactions",
+                    "booleanOperation",
+                    "connectorStart",
+                    "connectorEnd",
+                    "connectorLineType",
+                    "connectorStartStrokeCap",
+                    "connectorEndStrokeCap",
+                    "textBackground",
+                    "authorVisible",
+                    "authorName",
+                    "isWideWidth",
+                    "shapeType",
+                    "code",
+                    "codeLanguage",
+                    "numRows",
+                    "numColumns",
+                    "isSkippedSlide",
+                    "interactiveSlideElementType",
+                    "widgetId",
+                    "widgetSyncedState",
+                    "embedData",
+                    "linkUnfurlData",
+                    "mediaData",
+                    "defaultVariantId"
+                ]
+            }
+        }
     },
     isFetchCommand: true,
   },
@@ -11959,18 +13293,197 @@ export const generatedTools: ToolSchema[] = [
         "type": "object",
         "properties": {
             "depth": {
-                "type": "number"
+                "type": "number",
+                "description": "Max depth to traverse children. 0 = childIds only (default), 1+ = serialize children (requires compact=false)"
             },
             "filter": {
-                "type": "string"
+                "type": "string",
+                "description": "Filter by node type (e.g., \"FRAME\", \"TEXT\")"
             },
             "register": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "Register nodes in registry for later reference"
+            },
+            "compact": {
+                "type": "boolean",
+                "description": "Compact mode - only essential properties (id, name, type, x, y, width, height, visible, locked). Default: true"
+            },
+            "fields": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/definitions/SerializableProp"
+                },
+                "description": "Specific fields to include (overrides compact/excludeVerbose). E.g., [\"fills\", \"strokes\", \"effects\"]"
+            },
+            "excludeVerbose": {
+                "type": "boolean",
+                "description": "Exclude large properties like absoluteTransform, reactions, vectorNetwork. Default: true"
             }
         },
         "additionalProperties": false,
-        "description": "Query options for retrieving nodes.",
-        "definitions": {}
+        "description": "Query options for retrieving nodes.\n\nBy default, queries return COMPACT data to minimize response size:\n- compact=true (default): Only id, name, type, x, y, width, height, visible, locked, childIds\n- depth=0 (default): Children returned as childIds array only, not fully serialized\n- excludeVerbose=true (default): Large properties like transforms, fills, effects excluded\n\nUse compact=false or fields=[...] to get more properties.\n\nAvailable fields (partial list - use compact=false for all):\n- Layout: x, y, width, height, rotation, constraints, layoutMode, layoutAlign, layoutGrow\n- Visual: fills, strokes, effects, opacity, blendMode, cornerRadius\n- Text: characters, fontSize, fontFamily, fontWeight, textAlignHorizontal\n- Auto-layout: paddingTop/Right/Bottom/Left, itemSpacing, primaryAxisAlignItems\n- Components: componentPropertyDefinitions, mainComponentId, componentProperties",
+        "definitions": {
+            "SerializableProp": {
+                "type": "string",
+                "enum": [
+                    "name",
+                    "visible",
+                    "locked",
+                    "x",
+                    "y",
+                    "width",
+                    "height",
+                    "rotation",
+                    "absoluteTransform",
+                    "relativeTransform",
+                    "absoluteBoundingBox",
+                    "absoluteRenderBounds",
+                    "layoutAlign",
+                    "layoutGrow",
+                    "layoutPositioning",
+                    "constraints",
+                    "opacity",
+                    "blendMode",
+                    "isMask",
+                    "maskType",
+                    "fills",
+                    "fillStyleId",
+                    "fill",
+                    "fillColor",
+                    "strokes",
+                    "strokeStyleId",
+                    "stroke",
+                    "strokeColor",
+                    "strokeWeight",
+                    "strokeAlign",
+                    "strokeCap",
+                    "strokeJoin",
+                    "strokeMiterLimit",
+                    "dashPattern",
+                    "strokeTopWeight",
+                    "strokeRightWeight",
+                    "strokeBottomWeight",
+                    "strokeLeftWeight",
+                    "cornerRadius",
+                    "cornerSmoothing",
+                    "topLeftRadius",
+                    "topRightRadius",
+                    "bottomLeftRadius",
+                    "bottomRightRadius",
+                    "effects",
+                    "effectStyleId",
+                    "layoutMode",
+                    "primaryAxisSizingMode",
+                    "counterAxisSizingMode",
+                    "primaryAxisAlignItems",
+                    "counterAxisAlignItems",
+                    "counterAxisAlignContent",
+                    "paddingTop",
+                    "paddingRight",
+                    "paddingBottom",
+                    "paddingLeft",
+                    "padding",
+                    "itemSpacing",
+                    "counterAxisSpacing",
+                    "gap",
+                    "layoutWrap",
+                    "wrap",
+                    "itemReverseZIndex",
+                    "strokesIncludedInLayout",
+                    "direction",
+                    "align",
+                    "counterAlign",
+                    "layout",
+                    "minWidth",
+                    "maxWidth",
+                    "minHeight",
+                    "maxHeight",
+                    "clipsContent",
+                    "guides",
+                    "layoutGrids",
+                    "gridStyleId",
+                    "characters",
+                    "text",
+                    "fontSize",
+                    "fontFamily",
+                    "fontStyle",
+                    "fontWeight",
+                    "textAlignHorizontal",
+                    "textAlignVertical",
+                    "textAutoResize",
+                    "autoResize",
+                    "paragraphIndent",
+                    "paragraphSpacing",
+                    "lineHeight",
+                    "letterSpacing",
+                    "textCase",
+                    "textDecoration",
+                    "textDecorationStyle",
+                    "textDecorationOffset",
+                    "textDecorationThickness",
+                    "textDecorationColor",
+                    "textDecorationSkipInk",
+                    "textTruncation",
+                    "maxLines",
+                    "hyperlink",
+                    "textStyleId",
+                    "hangingPunctuation",
+                    "hangingList",
+                    "leadingTrim",
+                    "listSpacing",
+                    "autoRename",
+                    "componentPropertyDefinitions",
+                    "description",
+                    "documentationLinks",
+                    "mainComponent",
+                    "mainComponentId",
+                    "mainComponentName",
+                    "componentId",
+                    "componentProperties",
+                    "exposedInstances",
+                    "isExposedInstance",
+                    "overrides",
+                    "scaleFactor",
+                    "swapComponent",
+                    "vectorNetwork",
+                    "vectorPaths",
+                    "handleMirroring",
+                    "pointCount",
+                    "innerRadius",
+                    "arcData",
+                    "length",
+                    "color",
+                    "weight",
+                    "sectionContentsHidden",
+                    "devStatus",
+                    "exportSettings",
+                    "reactions",
+                    "booleanOperation",
+                    "connectorStart",
+                    "connectorEnd",
+                    "connectorLineType",
+                    "connectorStartStrokeCap",
+                    "connectorEndStrokeCap",
+                    "textBackground",
+                    "authorVisible",
+                    "authorName",
+                    "isWideWidth",
+                    "shapeType",
+                    "code",
+                    "codeLanguage",
+                    "numRows",
+                    "numColumns",
+                    "isSkippedSlide",
+                    "interactiveSlideElementType",
+                    "widgetId",
+                    "widgetSyncedState",
+                    "embedData",
+                    "linkUnfurlData",
+                    "mediaData",
+                    "defaultVariantId"
+                ]
+            }
+        }
     },
     isFetchCommand: true,
   },
@@ -12009,13 +13522,31 @@ export const generatedTools: ToolSchema[] = [
         "type": "object",
         "properties": {
             "depth": {
-                "type": "number"
+                "type": "number",
+                "description": "Max depth to traverse children. 0 = childIds only (default), 1+ = serialize children (requires compact=false)"
             },
             "filter": {
-                "type": "string"
+                "type": "string",
+                "description": "Filter by node type (e.g., \"FRAME\", \"TEXT\")"
             },
             "register": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "Register nodes in registry for later reference"
+            },
+            "compact": {
+                "type": "boolean",
+                "description": "Compact mode - only essential properties (id, name, type, x, y, width, height, visible, locked). Default: true"
+            },
+            "fields": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/definitions/SerializableProp"
+                },
+                "description": "Specific fields to include (overrides compact/excludeVerbose). E.g., [\"fills\", \"strokes\", \"effects\"]"
+            },
+            "excludeVerbose": {
+                "type": "boolean",
+                "description": "Exclude large properties like absoluteTransform, reactions, vectorNetwork. Default: true"
             },
             "name": {
                 "type": "string"
@@ -12029,7 +13560,168 @@ export const generatedTools: ToolSchema[] = [
         },
         "additionalProperties": false,
         "description": "Search for nodes matching criteria. Supports partial name matching (case-insensitive) and type filtering. Returns multiple matches.",
-        "definitions": {}
+        "definitions": {
+            "SerializableProp": {
+                "type": "string",
+                "enum": [
+                    "name",
+                    "visible",
+                    "locked",
+                    "x",
+                    "y",
+                    "width",
+                    "height",
+                    "rotation",
+                    "absoluteTransform",
+                    "relativeTransform",
+                    "absoluteBoundingBox",
+                    "absoluteRenderBounds",
+                    "layoutAlign",
+                    "layoutGrow",
+                    "layoutPositioning",
+                    "constraints",
+                    "opacity",
+                    "blendMode",
+                    "isMask",
+                    "maskType",
+                    "fills",
+                    "fillStyleId",
+                    "fill",
+                    "fillColor",
+                    "strokes",
+                    "strokeStyleId",
+                    "stroke",
+                    "strokeColor",
+                    "strokeWeight",
+                    "strokeAlign",
+                    "strokeCap",
+                    "strokeJoin",
+                    "strokeMiterLimit",
+                    "dashPattern",
+                    "strokeTopWeight",
+                    "strokeRightWeight",
+                    "strokeBottomWeight",
+                    "strokeLeftWeight",
+                    "cornerRadius",
+                    "cornerSmoothing",
+                    "topLeftRadius",
+                    "topRightRadius",
+                    "bottomLeftRadius",
+                    "bottomRightRadius",
+                    "effects",
+                    "effectStyleId",
+                    "layoutMode",
+                    "primaryAxisSizingMode",
+                    "counterAxisSizingMode",
+                    "primaryAxisAlignItems",
+                    "counterAxisAlignItems",
+                    "counterAxisAlignContent",
+                    "paddingTop",
+                    "paddingRight",
+                    "paddingBottom",
+                    "paddingLeft",
+                    "padding",
+                    "itemSpacing",
+                    "counterAxisSpacing",
+                    "gap",
+                    "layoutWrap",
+                    "wrap",
+                    "itemReverseZIndex",
+                    "strokesIncludedInLayout",
+                    "direction",
+                    "align",
+                    "counterAlign",
+                    "layout",
+                    "minWidth",
+                    "maxWidth",
+                    "minHeight",
+                    "maxHeight",
+                    "clipsContent",
+                    "guides",
+                    "layoutGrids",
+                    "gridStyleId",
+                    "characters",
+                    "text",
+                    "fontSize",
+                    "fontFamily",
+                    "fontStyle",
+                    "fontWeight",
+                    "textAlignHorizontal",
+                    "textAlignVertical",
+                    "textAutoResize",
+                    "autoResize",
+                    "paragraphIndent",
+                    "paragraphSpacing",
+                    "lineHeight",
+                    "letterSpacing",
+                    "textCase",
+                    "textDecoration",
+                    "textDecorationStyle",
+                    "textDecorationOffset",
+                    "textDecorationThickness",
+                    "textDecorationColor",
+                    "textDecorationSkipInk",
+                    "textTruncation",
+                    "maxLines",
+                    "hyperlink",
+                    "textStyleId",
+                    "hangingPunctuation",
+                    "hangingList",
+                    "leadingTrim",
+                    "listSpacing",
+                    "autoRename",
+                    "componentPropertyDefinitions",
+                    "description",
+                    "documentationLinks",
+                    "mainComponent",
+                    "mainComponentId",
+                    "mainComponentName",
+                    "componentId",
+                    "componentProperties",
+                    "exposedInstances",
+                    "isExposedInstance",
+                    "overrides",
+                    "scaleFactor",
+                    "swapComponent",
+                    "vectorNetwork",
+                    "vectorPaths",
+                    "handleMirroring",
+                    "pointCount",
+                    "innerRadius",
+                    "arcData",
+                    "length",
+                    "color",
+                    "weight",
+                    "sectionContentsHidden",
+                    "devStatus",
+                    "exportSettings",
+                    "reactions",
+                    "booleanOperation",
+                    "connectorStart",
+                    "connectorEnd",
+                    "connectorLineType",
+                    "connectorStartStrokeCap",
+                    "connectorEndStrokeCap",
+                    "textBackground",
+                    "authorVisible",
+                    "authorName",
+                    "isWideWidth",
+                    "shapeType",
+                    "code",
+                    "codeLanguage",
+                    "numRows",
+                    "numColumns",
+                    "isSkippedSlide",
+                    "interactiveSlideElementType",
+                    "widgetId",
+                    "widgetSyncedState",
+                    "embedData",
+                    "linkUnfurlData",
+                    "mediaData",
+                    "defaultVariantId"
+                ]
+            }
+        }
     },
     isFetchCommand: true,
   },
@@ -12043,18 +13735,197 @@ export const generatedTools: ToolSchema[] = [
         "type": "object",
         "properties": {
             "depth": {
-                "type": "number"
+                "type": "number",
+                "description": "Max depth to traverse children. 0 = childIds only (default), 1+ = serialize children (requires compact=false)"
             },
             "filter": {
-                "type": "string"
+                "type": "string",
+                "description": "Filter by node type (e.g., \"FRAME\", \"TEXT\")"
             },
             "register": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "Register nodes in registry for later reference"
+            },
+            "compact": {
+                "type": "boolean",
+                "description": "Compact mode - only essential properties (id, name, type, x, y, width, height, visible, locked). Default: true"
+            },
+            "fields": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/definitions/SerializableProp"
+                },
+                "description": "Specific fields to include (overrides compact/excludeVerbose). E.g., [\"fills\", \"strokes\", \"effects\"]"
+            },
+            "excludeVerbose": {
+                "type": "boolean",
+                "description": "Exclude large properties like absoluteTransform, reactions, vectorNetwork. Default: true"
             }
         },
         "additionalProperties": false,
-        "description": "Query options for retrieving nodes.",
-        "definitions": {}
+        "description": "Query options for retrieving nodes.\n\nBy default, queries return COMPACT data to minimize response size:\n- compact=true (default): Only id, name, type, x, y, width, height, visible, locked, childIds\n- depth=0 (default): Children returned as childIds array only, not fully serialized\n- excludeVerbose=true (default): Large properties like transforms, fills, effects excluded\n\nUse compact=false or fields=[...] to get more properties.\n\nAvailable fields (partial list - use compact=false for all):\n- Layout: x, y, width, height, rotation, constraints, layoutMode, layoutAlign, layoutGrow\n- Visual: fills, strokes, effects, opacity, blendMode, cornerRadius\n- Text: characters, fontSize, fontFamily, fontWeight, textAlignHorizontal\n- Auto-layout: paddingTop/Right/Bottom/Left, itemSpacing, primaryAxisAlignItems\n- Components: componentPropertyDefinitions, mainComponentId, componentProperties",
+        "definitions": {
+            "SerializableProp": {
+                "type": "string",
+                "enum": [
+                    "name",
+                    "visible",
+                    "locked",
+                    "x",
+                    "y",
+                    "width",
+                    "height",
+                    "rotation",
+                    "absoluteTransform",
+                    "relativeTransform",
+                    "absoluteBoundingBox",
+                    "absoluteRenderBounds",
+                    "layoutAlign",
+                    "layoutGrow",
+                    "layoutPositioning",
+                    "constraints",
+                    "opacity",
+                    "blendMode",
+                    "isMask",
+                    "maskType",
+                    "fills",
+                    "fillStyleId",
+                    "fill",
+                    "fillColor",
+                    "strokes",
+                    "strokeStyleId",
+                    "stroke",
+                    "strokeColor",
+                    "strokeWeight",
+                    "strokeAlign",
+                    "strokeCap",
+                    "strokeJoin",
+                    "strokeMiterLimit",
+                    "dashPattern",
+                    "strokeTopWeight",
+                    "strokeRightWeight",
+                    "strokeBottomWeight",
+                    "strokeLeftWeight",
+                    "cornerRadius",
+                    "cornerSmoothing",
+                    "topLeftRadius",
+                    "topRightRadius",
+                    "bottomLeftRadius",
+                    "bottomRightRadius",
+                    "effects",
+                    "effectStyleId",
+                    "layoutMode",
+                    "primaryAxisSizingMode",
+                    "counterAxisSizingMode",
+                    "primaryAxisAlignItems",
+                    "counterAxisAlignItems",
+                    "counterAxisAlignContent",
+                    "paddingTop",
+                    "paddingRight",
+                    "paddingBottom",
+                    "paddingLeft",
+                    "padding",
+                    "itemSpacing",
+                    "counterAxisSpacing",
+                    "gap",
+                    "layoutWrap",
+                    "wrap",
+                    "itemReverseZIndex",
+                    "strokesIncludedInLayout",
+                    "direction",
+                    "align",
+                    "counterAlign",
+                    "layout",
+                    "minWidth",
+                    "maxWidth",
+                    "minHeight",
+                    "maxHeight",
+                    "clipsContent",
+                    "guides",
+                    "layoutGrids",
+                    "gridStyleId",
+                    "characters",
+                    "text",
+                    "fontSize",
+                    "fontFamily",
+                    "fontStyle",
+                    "fontWeight",
+                    "textAlignHorizontal",
+                    "textAlignVertical",
+                    "textAutoResize",
+                    "autoResize",
+                    "paragraphIndent",
+                    "paragraphSpacing",
+                    "lineHeight",
+                    "letterSpacing",
+                    "textCase",
+                    "textDecoration",
+                    "textDecorationStyle",
+                    "textDecorationOffset",
+                    "textDecorationThickness",
+                    "textDecorationColor",
+                    "textDecorationSkipInk",
+                    "textTruncation",
+                    "maxLines",
+                    "hyperlink",
+                    "textStyleId",
+                    "hangingPunctuation",
+                    "hangingList",
+                    "leadingTrim",
+                    "listSpacing",
+                    "autoRename",
+                    "componentPropertyDefinitions",
+                    "description",
+                    "documentationLinks",
+                    "mainComponent",
+                    "mainComponentId",
+                    "mainComponentName",
+                    "componentId",
+                    "componentProperties",
+                    "exposedInstances",
+                    "isExposedInstance",
+                    "overrides",
+                    "scaleFactor",
+                    "swapComponent",
+                    "vectorNetwork",
+                    "vectorPaths",
+                    "handleMirroring",
+                    "pointCount",
+                    "innerRadius",
+                    "arcData",
+                    "length",
+                    "color",
+                    "weight",
+                    "sectionContentsHidden",
+                    "devStatus",
+                    "exportSettings",
+                    "reactions",
+                    "booleanOperation",
+                    "connectorStart",
+                    "connectorEnd",
+                    "connectorLineType",
+                    "connectorStartStrokeCap",
+                    "connectorEndStrokeCap",
+                    "textBackground",
+                    "authorVisible",
+                    "authorName",
+                    "isWideWidth",
+                    "shapeType",
+                    "code",
+                    "codeLanguage",
+                    "numRows",
+                    "numColumns",
+                    "isSkippedSlide",
+                    "interactiveSlideElementType",
+                    "widgetId",
+                    "widgetSyncedState",
+                    "embedData",
+                    "linkUnfurlData",
+                    "mediaData",
+                    "defaultVariantId"
+                ]
+            }
+        }
     },
     isFetchCommand: true,
   },
@@ -12068,18 +13939,197 @@ export const generatedTools: ToolSchema[] = [
         "type": "object",
         "properties": {
             "depth": {
-                "type": "number"
+                "type": "number",
+                "description": "Max depth to traverse children. 0 = childIds only (default), 1+ = serialize children (requires compact=false)"
             },
             "filter": {
-                "type": "string"
+                "type": "string",
+                "description": "Filter by node type (e.g., \"FRAME\", \"TEXT\")"
             },
             "register": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "Register nodes in registry for later reference"
+            },
+            "compact": {
+                "type": "boolean",
+                "description": "Compact mode - only essential properties (id, name, type, x, y, width, height, visible, locked). Default: true"
+            },
+            "fields": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/definitions/SerializableProp"
+                },
+                "description": "Specific fields to include (overrides compact/excludeVerbose). E.g., [\"fills\", \"strokes\", \"effects\"]"
+            },
+            "excludeVerbose": {
+                "type": "boolean",
+                "description": "Exclude large properties like absoluteTransform, reactions, vectorNetwork. Default: true"
             }
         },
         "additionalProperties": false,
-        "description": "Query options for retrieving nodes.",
-        "definitions": {}
+        "description": "Query options for retrieving nodes.\n\nBy default, queries return COMPACT data to minimize response size:\n- compact=true (default): Only id, name, type, x, y, width, height, visible, locked, childIds\n- depth=0 (default): Children returned as childIds array only, not fully serialized\n- excludeVerbose=true (default): Large properties like transforms, fills, effects excluded\n\nUse compact=false or fields=[...] to get more properties.\n\nAvailable fields (partial list - use compact=false for all):\n- Layout: x, y, width, height, rotation, constraints, layoutMode, layoutAlign, layoutGrow\n- Visual: fills, strokes, effects, opacity, blendMode, cornerRadius\n- Text: characters, fontSize, fontFamily, fontWeight, textAlignHorizontal\n- Auto-layout: paddingTop/Right/Bottom/Left, itemSpacing, primaryAxisAlignItems\n- Components: componentPropertyDefinitions, mainComponentId, componentProperties",
+        "definitions": {
+            "SerializableProp": {
+                "type": "string",
+                "enum": [
+                    "name",
+                    "visible",
+                    "locked",
+                    "x",
+                    "y",
+                    "width",
+                    "height",
+                    "rotation",
+                    "absoluteTransform",
+                    "relativeTransform",
+                    "absoluteBoundingBox",
+                    "absoluteRenderBounds",
+                    "layoutAlign",
+                    "layoutGrow",
+                    "layoutPositioning",
+                    "constraints",
+                    "opacity",
+                    "blendMode",
+                    "isMask",
+                    "maskType",
+                    "fills",
+                    "fillStyleId",
+                    "fill",
+                    "fillColor",
+                    "strokes",
+                    "strokeStyleId",
+                    "stroke",
+                    "strokeColor",
+                    "strokeWeight",
+                    "strokeAlign",
+                    "strokeCap",
+                    "strokeJoin",
+                    "strokeMiterLimit",
+                    "dashPattern",
+                    "strokeTopWeight",
+                    "strokeRightWeight",
+                    "strokeBottomWeight",
+                    "strokeLeftWeight",
+                    "cornerRadius",
+                    "cornerSmoothing",
+                    "topLeftRadius",
+                    "topRightRadius",
+                    "bottomLeftRadius",
+                    "bottomRightRadius",
+                    "effects",
+                    "effectStyleId",
+                    "layoutMode",
+                    "primaryAxisSizingMode",
+                    "counterAxisSizingMode",
+                    "primaryAxisAlignItems",
+                    "counterAxisAlignItems",
+                    "counterAxisAlignContent",
+                    "paddingTop",
+                    "paddingRight",
+                    "paddingBottom",
+                    "paddingLeft",
+                    "padding",
+                    "itemSpacing",
+                    "counterAxisSpacing",
+                    "gap",
+                    "layoutWrap",
+                    "wrap",
+                    "itemReverseZIndex",
+                    "strokesIncludedInLayout",
+                    "direction",
+                    "align",
+                    "counterAlign",
+                    "layout",
+                    "minWidth",
+                    "maxWidth",
+                    "minHeight",
+                    "maxHeight",
+                    "clipsContent",
+                    "guides",
+                    "layoutGrids",
+                    "gridStyleId",
+                    "characters",
+                    "text",
+                    "fontSize",
+                    "fontFamily",
+                    "fontStyle",
+                    "fontWeight",
+                    "textAlignHorizontal",
+                    "textAlignVertical",
+                    "textAutoResize",
+                    "autoResize",
+                    "paragraphIndent",
+                    "paragraphSpacing",
+                    "lineHeight",
+                    "letterSpacing",
+                    "textCase",
+                    "textDecoration",
+                    "textDecorationStyle",
+                    "textDecorationOffset",
+                    "textDecorationThickness",
+                    "textDecorationColor",
+                    "textDecorationSkipInk",
+                    "textTruncation",
+                    "maxLines",
+                    "hyperlink",
+                    "textStyleId",
+                    "hangingPunctuation",
+                    "hangingList",
+                    "leadingTrim",
+                    "listSpacing",
+                    "autoRename",
+                    "componentPropertyDefinitions",
+                    "description",
+                    "documentationLinks",
+                    "mainComponent",
+                    "mainComponentId",
+                    "mainComponentName",
+                    "componentId",
+                    "componentProperties",
+                    "exposedInstances",
+                    "isExposedInstance",
+                    "overrides",
+                    "scaleFactor",
+                    "swapComponent",
+                    "vectorNetwork",
+                    "vectorPaths",
+                    "handleMirroring",
+                    "pointCount",
+                    "innerRadius",
+                    "arcData",
+                    "length",
+                    "color",
+                    "weight",
+                    "sectionContentsHidden",
+                    "devStatus",
+                    "exportSettings",
+                    "reactions",
+                    "booleanOperation",
+                    "connectorStart",
+                    "connectorEnd",
+                    "connectorLineType",
+                    "connectorStartStrokeCap",
+                    "connectorEndStrokeCap",
+                    "textBackground",
+                    "authorVisible",
+                    "authorName",
+                    "isWideWidth",
+                    "shapeType",
+                    "code",
+                    "codeLanguage",
+                    "numRows",
+                    "numColumns",
+                    "isSkippedSlide",
+                    "interactiveSlideElementType",
+                    "widgetId",
+                    "widgetSyncedState",
+                    "embedData",
+                    "linkUnfurlData",
+                    "mediaData",
+                    "defaultVariantId"
+                ]
+            }
+        }
     },
     isFetchCommand: true,
   },
