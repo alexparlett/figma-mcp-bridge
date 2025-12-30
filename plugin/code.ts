@@ -97,7 +97,7 @@ import {
 figma.showUI(__html__, { width: 240, height: 28 });
 
 // Process commands from UI
-figma.ui.onmessage = (msg: UIMessage) => {
+figma.ui.onmessage = async (msg: UIMessage) => {
   if (msg.type === 'execute-commands') {
     executeCommands(msg.commands || []).then((results) => {
       figma.ui.postMessage({ type: 'success', results });
@@ -108,6 +108,15 @@ figma.ui.onmessage = (msg: UIMessage) => {
 
   if (msg.type === 'resize') {
     figma.ui.resize(240, msg.height || 28);
+  }
+
+  if (msg.type === 'save-url') {
+    await figma.clientStorage.setAsync('bridgeUrl', msg.url);
+  }
+
+  if (msg.type === 'load-url') {
+    const url = await figma.clientStorage.getAsync('bridgeUrl');
+    figma.ui.postMessage({ type: 'url-loaded', url: url || 'ws://localhost:3456' });
   }
 
   if (msg.type === 'cancel') {

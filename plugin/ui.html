@@ -258,11 +258,20 @@
         if (window._pendingCallback) { window._pendingCallback(msg.results); window._pendingCallback = null; }
       } else if (msg.type === 'error') {
         log('Error: ' + msg.message, 'error');
+      } else if (msg.type === 'url-loaded') {
+        bridgeUrlInput.value = msg.url || 'ws://localhost:3456';
+        setTimeout(connect, 100);
       }
     };
-    
+
+    // Save URL when changed
+    bridgeUrlInput.addEventListener('change', function() {
+      parent.postMessage({ pluginMessage: { type: 'save-url', url: bridgeUrlInput.value } }, '*');
+    });
+
     updateStats();
-    setTimeout(connect, 300);
+    // Load saved URL (will trigger connect after loaded)
+    parent.postMessage({ pluginMessage: { type: 'load-url' } }, '*');
   </script>
 </body>
 </html>

@@ -135,7 +135,8 @@ export async function handleToolCall(
   name: string,
   args: Record<string, unknown> | undefined,
   queue: CommandQueue,
-  getConnectionStatus: () => boolean
+  getConnectionStatus: () => boolean,
+  getMode: () => "primary" | "relay"
 ): Promise<ToolCallResult> {
   try {
     // ============ Special Cases (no command submission) ============
@@ -150,6 +151,7 @@ export async function handleToolCall(
               {
                 connected: getConnectionStatus(),
                 pendingCommands: status.pendingCount,
+                mode: getMode(),
               },
               null,
               2

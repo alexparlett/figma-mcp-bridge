@@ -49,10 +49,13 @@ export class CommandQueue extends EventEmitter {
     const taggedCommands: TaggedCommand[] = [];
     const promises: Promise<CommandResult>[] = [];
 
+    console.error(`[Queue] submitBatch called with ${commands.length} commands, connected=${this.connected}`);
+
     commands.forEach((cmd, index) => {
       const cmdId = `${batchId}-${index}`;
       const taggedCommand: TaggedCommand = { ...cmd, _cmdId: cmdId };
       taggedCommands.push(taggedCommand);
+      console.error(`[Queue] Created tagged command: ${cmdId}, type=${cmd.type}`);
 
       const promise = new Promise<CommandResult>((resolve, reject) => {
         const timeoutId = setTimeout(() => {
@@ -66,6 +69,7 @@ export class CommandQueue extends EventEmitter {
       promises.push(promise);
     });
 
+    console.error(`[Queue] Emitting commands-batch event with ${taggedCommands.length} commands`);
     this.emit("commands-batch", taggedCommands);
     return Promise.all(promises);
   }

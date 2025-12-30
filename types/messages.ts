@@ -29,17 +29,21 @@ export interface CommandResult {
 
 // ============ WebSocket Messages ============
 
-export type WebSocketMessageType = 'commands' | 'results';
+export type WebSocketMessageType = 'commands' | 'results' | 'relay-register' | 'relay-commands' | 'relay-results' | 'connection-status';
 
 export interface WebSocketMessage {
   type: WebSocketMessageType;
   commands?: TaggedCommand[];
   results?: CommandResult[];
+  /** Relay client ID for routing responses back */
+  relayId?: string;
+  /** Connection status for relay clients */
+  connected?: boolean;
 }
 
 // ============ UI Messages (Plugin <-> UI) ============
 
-export type UIMessageType = 'execute-commands' | 'success' | 'error' | 'resize' | 'cancel';
+export type UIMessageType = 'execute-commands' | 'success' | 'error' | 'resize' | 'cancel' | 'save-url' | 'load-url' | 'url-loaded';
 
 export interface UIMessage {
   type: UIMessageType;
@@ -47,4 +51,5 @@ export interface UIMessage {
   results?: CommandResult[];
   message?: string;
   height?: number;
+  url?: string;
 }

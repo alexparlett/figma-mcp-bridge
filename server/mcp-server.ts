@@ -8,16 +8,19 @@ import { handleToolCall } from "./tools/handlers/index.js";
 export interface McpServerConfig {
   queue: CommandQueue;
   getConnectionStatus: () => boolean;
+  getMode: () => "primary" | "relay";
 }
 
 export class McpServer {
   private server: Server;
   private queue: CommandQueue;
   private getConnectionStatus: () => boolean;
+  private getMode: () => "primary" | "relay";
 
   constructor(config: McpServerConfig) {
     this.queue = config.queue;
     this.getConnectionStatus = config.getConnectionStatus;
+    this.getMode = config.getMode;
 
     this.server = new Server(
       {
@@ -49,7 +52,8 @@ export class McpServer {
         name,
         args as Record<string, unknown> | undefined,
         this.queue,
-        this.getConnectionStatus
+        this.getConnectionStatus,
+        this.getMode
       );
       return {
         content: result.content.map((c) => ({ type: "text" as const, text: c.text })),
