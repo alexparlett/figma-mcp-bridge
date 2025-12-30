@@ -3,22 +3,22 @@
   "version": "1.0.0",
   "description": "MCP server and Figma plugin for bridging Claude to Figma",
   "type": "module",
-  "main": "server/index.js",
+  "main": "dist/server/index.js",
   "bin": {
-    "figma-mcp-bridge": "./server/index.js"
+    "figma-mcp-bridge": "./dist/server/index.js"
   },
   "scripts": {
     "build": "npm run build:server && npm run build:plugin",
     "build:server": "tsc -p tsconfig.server.json",
-    "build:plugin": "esbuild plugin/code.ts --bundle --outfile=plugin/code.js --target=es6 --format=iife",
+    "build:plugin": "esbuild plugin/code.ts --bundle --outfile=dist/plugin/code.js --target=es6 --format=iife && cp plugin/ui.html dist/plugin/ && cp plugin/manifest.json dist/plugin/",
     "watch": "concurrently \"npm run watch:server\" \"npm run watch:plugin\"",
     "watch:server": "tsc -p tsconfig.server.json --watch",
-    "watch:plugin": "esbuild plugin/code.ts --bundle --outfile=plugin/code.js --target=es6 --format=iife --watch",
-    "start": "node server/index.js",
+    "watch:plugin": "esbuild plugin/code.ts --bundle --outfile=dist/plugin/code.js --target=es6 --format=iife --watch",
+    "start": "node dist/server/index.js",
     "dev": "npm run build && npm run start",
     "lint": "eslint --ext .ts server/ plugin/",
     "lint:fix": "eslint --ext .ts server/ plugin/ --fix",
-    "clean": "rm -f server/*.js server/*.js.map plugin/*.js plugin/*.js.map"
+    "clean": "rm -rf dist/"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^0.5.0",

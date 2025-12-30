@@ -1,10 +1,5 @@
 {
-  "extends": "./tsconfig.base.json",
-  "compilerOptions": {
-    "noEmit": true
-  },
-  "include": ["server/**/*.ts", "plugin/**/*.ts"],
-  "exclude": ["node_modules"],
+  "files": [],
   "references": [
     { "path": "./tsconfig.server.json" },
     { "path": "./tsconfig.plugin.json" }

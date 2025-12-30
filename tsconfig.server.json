@@ -1,9 +1,23 @@
 {
-  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ES2022"],
-    "types": ["node", "ws"]
+    "lib": [
+      "ES2022"
+    ],
+    "outDir": "./dist",
+    "rootDir": ".",
+    "types": [
+      "node",
+      "ws"
+    ]
   },
-  "include": ["server/**/*.ts"],
-  "exclude": ["node_modules"]
+  "composite": true,
+  "exclude": [
+    "node_modules",
+    "plugin"
+  ],
+  "extends": "./tsconfig.base.json",
+  "include": [
+    "server/**/*.ts",
+    "types/**/*.ts"
+  ]
 }

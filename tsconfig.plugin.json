@@ -1,11 +1,17 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "declaration": false,
     "declarationMap": false,
     "lib": [
       "ES2017"
     ],
     "module": "None",
+    "paths": {
+      "../types/types.js": [
+        "./types/types.ts"
+      ]
+    },
     "skipLibCheck": true,
     "sourceMap": false,
     "strict": true,
@@ -13,14 +19,12 @@
     "typeRoots": [
       "./node_modules/@types",
       "./node_modules/@figma"
-    ],
-    "baseUrl": ".",
-    "paths": {
-      "../types/types.js": ["./types/types.ts"]
-    }
+    ]
   },
+  "composite": true,
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "server"
   ],
   "include": [
     "plugin/**/*.ts",

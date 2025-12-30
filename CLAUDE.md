@@ -27,20 +27,8 @@ Add to Claude Desktop config (`~/Library/Application Support/Claude/claude_deskt
 {
   "mcpServers": {
     "figma-bridge": {
-      "command": "npx",
-      "args": ["tsx", "/path/to/figma-mcp-bridge/server/server.ts"]
-    }
-  }
-}
-```
-
-Or if built:
-```json
-{
-  "mcpServers": {
-    "figma-bridge": {
       "command": "node",
-      "args": ["/path/to/figma-mcp-bridge/server/server.js"]
+      "args": ["/path/to/figma-mcp-bridge/dist/server/index.js"]
     }
   }
 }
@@ -50,7 +38,7 @@ Or if built:
 
 1. Open Figma Desktop
 2. Go to Plugins → Development → Import plugin from manifest
-3. Select `plugin/manifest.json`
+3. Select `dist/plugin/manifest.json`
 4. Run the plugin from Plugins menu - it will connect via WebSocket to the MCP server
 
 ## Key Files

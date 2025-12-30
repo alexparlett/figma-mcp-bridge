@@ -5,10 +5,11 @@ node_modules
 .history/
 .claude/
 
-out/
+# Build output
 dist/
 *.js
 *.d.ts
 *.d.ts.map
 *.js.map
+
 .DS_Store
