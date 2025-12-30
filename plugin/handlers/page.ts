@@ -1,16 +1,33 @@
 /// <reference types="@figma/plugin-typings" />
 
-import type { Command, PageData } from "../../types/types.js";
-import { nodeRegistry } from "../registry.js";
-import { defaultVal } from "../utils.js";
+/**
+ * Page handlers for Figma MCP Bridge.
+ */
 
-// ============ PAGE ============
-export function createPage(cmd: Command): PageNode {
+import type { Command } from "../../types/commands.js";
+import type { PageData, PageDividerData } from "../../types/data.js";
+import { defaultVal, registerNode } from "../utils.js";
+
+// ============ CREATE PAGE ============
+
+export async function createPage(cmd: Command): Promise<PageNode> {
   const d = (cmd.data || {}) as PageData;
   const page = figma.createPage();
 
   page.name = defaultVal(d.name, 'New Page');
 
-  if (cmd.id) nodeRegistry.set(cmd.id, page);
+  registerNode(cmd, page);
   return page;
+}
+
+// ============ CREATE PAGE DIVIDER ============
+
+export async function createPageDivider(cmd: Command): Promise<PageNode> {
+  const d = (cmd.data || {}) as PageDividerData;
+  const divider = figma.createPageDivider();
+
+  divider.name = defaultVal(d.name, '───────────');
+
+  registerNode(cmd, divider);
+  return divider;
 }

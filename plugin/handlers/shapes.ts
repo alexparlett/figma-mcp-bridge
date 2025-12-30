@@ -1,11 +1,36 @@
 /// <reference types="@figma/plugin-typings" />
 
-import type { Command, FrameData, RectangleData, EllipseData, LineData, GroupData } from "../../types/types.js";
-import { nodeRegistry } from "../registry.js";
-import { defaultVal, applyFills, applyStroke, solidPaint, getParentNode } from "../utils.js";
+/**
+ * Shape creation handlers for Figma MCP Bridge.
+ */
+
+import type { Command } from "../../types/commands.js";
+import type {
+  FrameData,
+  RectangleData,
+  EllipseData,
+  PolygonData,
+  StarData,
+  LineData,
+  VectorData,
+  SectionData,
+  SliceData,
+  SvgImportData,
+  GroupData,
+} from "../../types/data.js";
+import {
+  defaultVal,
+  applyFills,
+  applyStrokes,
+  applyEffects,
+  getParent,
+  registerNode,
+  parseColorInput,
+} from "../utils.js";
 
 // ============ FRAME ============
-export function createFrame(cmd: Command, _parentNode?: SceneNode): FrameNode {
+
+export async function createFrame(cmd: Command, parentNode?: SceneNode): Promise<FrameNode> {
   const d = (cmd.data || {}) as FrameData;
   const frame = figma.createFrame();
 
@@ -14,69 +39,81 @@ export function createFrame(cmd: Command, _parentNode?: SceneNode): FrameNode {
   frame.y = defaultVal(d.y, 0);
   frame.resize(defaultVal(d.width, 100), defaultVal(d.height, 100));
 
-  // Shorthand: fill -> fills
-  if (d.fill && !d.fills) {
-    applyFills(frame, [{ color: d.fill }]);
-  } else if (d.fills) {
-    applyFills(frame, d.fills);
-  }
-
-  if (d.cornerRadius !== undefined) {
-    frame.cornerRadius = d.cornerRadius;
-  }
-
-  // Stroke support
-  if (d.stroke) {
-    applyStroke(frame, d.stroke);
-  }
+  // Corner radius
+  if (d.cornerRadius !== undefined) frame.cornerRadius = d.cornerRadius;
+  if (d.topLeftRadius !== undefined) frame.topLeftRadius = d.topLeftRadius;
+  if (d.topRightRadius !== undefined) frame.topRightRadius = d.topRightRadius;
+  if (d.bottomLeftRadius !== undefined) frame.bottomLeftRadius = d.bottomLeftRadius;
+  if (d.bottomRightRadius !== undefined) frame.bottomRightRadius = d.bottomRightRadius;
+  if (d.cornerSmoothing !== undefined) frame.cornerSmoothing = d.cornerSmoothing;
 
   // Auto-layout
-  const hasLayout = d.layout || d.direction || d.gap !== undefined || d.padding !== undefined;
-  const hasChildren = cmd.children && cmd.children.length > 0;
+  const hasLayout = d.layoutMode || d.direction || d.gap !== undefined || d.padding !== undefined || d.layout;
 
-  if (hasLayout || hasChildren) {
+  if (hasLayout) {
     const layoutConfig = d.layout || {};
-    const layoutDirection = d.direction || layoutConfig.direction || 'VERTICAL';
-    const gap = d.gap !== undefined ? d.gap : layoutConfig.gap;
-    const padding = d.padding !== undefined ? d.padding : layoutConfig.padding;
+    frame.layoutMode = d.layoutMode || d.direction || layoutConfig.direction || 'VERTICAL';
+    frame.primaryAxisSizingMode = d.primaryAxisSizingMode || layoutConfig.primarySizing || 'AUTO';
+    frame.counterAxisSizingMode = d.counterAxisSizingMode || layoutConfig.counterSizing || 'AUTO';
+    frame.itemSpacing = d.itemSpacing ?? d.gap ?? layoutConfig.gap ?? 0;
 
-    frame.layoutMode = layoutDirection;
-    frame.primaryAxisSizingMode = defaultVal(layoutConfig.primarySizing, 'AUTO');
-    frame.counterAxisSizingMode = defaultVal(layoutConfig.counterSizing, 'AUTO');
-    frame.itemSpacing = defaultVal(gap, 0);
+    const basePadding = d.padding ?? layoutConfig.padding ?? 0;
+    frame.paddingTop = d.paddingTop ?? layoutConfig.paddingTop ?? basePadding;
+    frame.paddingRight = d.paddingRight ?? layoutConfig.paddingRight ?? basePadding;
+    frame.paddingBottom = d.paddingBottom ?? layoutConfig.paddingBottom ?? basePadding;
+    frame.paddingLeft = d.paddingLeft ?? layoutConfig.paddingLeft ?? basePadding;
 
-    const basePadding = defaultVal(padding, 0);
-    frame.paddingTop = defaultVal(d.paddingTop, defaultVal(layoutConfig.paddingTop, basePadding));
-    frame.paddingRight = defaultVal(d.paddingRight, defaultVal(layoutConfig.paddingRight, basePadding));
-    frame.paddingBottom = defaultVal(d.paddingBottom, defaultVal(layoutConfig.paddingBottom, basePadding));
-    frame.paddingLeft = defaultVal(d.paddingLeft, defaultVal(layoutConfig.paddingLeft, basePadding));
-
-    const align = d.align || layoutConfig.primaryAlign;
-    const counterAlign = d.counterAlign || layoutConfig.counterAlign;
-    if (align) {
-      frame.primaryAxisAlignItems = align;
+    if (d.primaryAxisAlignItems || d.align || layoutConfig.primaryAlign) {
+      frame.primaryAxisAlignItems = d.primaryAxisAlignItems || d.align || layoutConfig.primaryAlign || 'MIN';
     }
-    if (counterAlign) {
-      frame.counterAxisAlignItems = counterAlign;
+    if (d.counterAxisAlignItems || d.counterAlign || layoutConfig.counterAlign) {
+      frame.counterAxisAlignItems = d.counterAxisAlignItems || d.counterAlign || layoutConfig.counterAlign || 'MIN';
+    }
+    if (d.layoutWrap || d.wrap) {
+      frame.layoutWrap = d.layoutWrap || d.wrap || 'NO_WRAP';
+    }
+    if (d.counterAxisSpacing !== undefined) {
+      frame.counterAxisSpacing = d.counterAxisSpacing;
+    }
+    if (d.itemReverseZIndex !== undefined) {
+      frame.itemReverseZIndex = d.itemReverseZIndex;
+    }
+    if (d.strokesIncludedInLayout !== undefined) {
+      frame.strokesIncludedInLayout = d.strokesIncludedInLayout;
     }
   }
 
-  if (d.clipsContent !== undefined) {
-    frame.clipsContent = d.clipsContent;
+  // Clipping
+  if (d.clipsContent !== undefined) frame.clipsContent = d.clipsContent;
+
+  // Fills, strokes, effects
+  await applyFills(frame, d);
+  await applyStrokes(frame, d);
+  await applyEffects(frame, d);
+
+  // Blend mode and opacity
+  if (d.blendMode) frame.blendMode = d.blendMode;
+  if (d.opacity !== undefined) frame.opacity = d.opacity;
+  if (d.visible !== undefined) frame.visible = d.visible;
+  if (d.locked !== undefined) frame.locked = d.locked;
+  if (d.rotation !== undefined) frame.rotation = d.rotation;
+
+  // Constraints
+  if (d.constraints) {
+    frame.constraints = d.constraints;
   }
 
   // Parent
-  const parent = getParentNode(d as Record<string, unknown>, _parentNode);
-  if (parent) {
-    parent.appendChild(frame);
-  }
+  const parent = getParent(d, parentNode);
+  if (parent) parent.appendChild(frame);
 
-  if (cmd.id) nodeRegistry.set(cmd.id, frame);
+  registerNode(cmd, frame);
   return frame;
 }
 
 // ============ RECTANGLE ============
-export function createRectangle(cmd: Command, _parentNode?: SceneNode): RectangleNode {
+
+export async function createRectangle(cmd: Command, parentNode?: SceneNode): Promise<RectangleNode> {
   const d = (cmd.data || {}) as RectangleData;
   const rect = figma.createRectangle();
 
@@ -85,33 +122,42 @@ export function createRectangle(cmd: Command, _parentNode?: SceneNode): Rectangl
   rect.y = defaultVal(d.y, 0);
   rect.resize(defaultVal(d.width, 100), defaultVal(d.height, 100));
 
-  if (d.fills) {
-    applyFills(rect, d.fills);
-  } else if (d.fillColor || d.fill) {
-    rect.fills = solidPaint((d.fillColor || d.fill)!);
+  // Corner radius
+  if (d.cornerRadius !== undefined) rect.cornerRadius = d.cornerRadius;
+  if (d.topLeftRadius !== undefined) rect.topLeftRadius = d.topLeftRadius;
+  if (d.topRightRadius !== undefined) rect.topRightRadius = d.topRightRadius;
+  if (d.bottomLeftRadius !== undefined) rect.bottomLeftRadius = d.bottomLeftRadius;
+  if (d.bottomRightRadius !== undefined) rect.bottomRightRadius = d.bottomRightRadius;
+  if (d.cornerSmoothing !== undefined) rect.cornerSmoothing = d.cornerSmoothing;
+
+  // Fills, strokes, effects
+  await applyFills(rect, d);
+  await applyStrokes(rect, d);
+  await applyEffects(rect, d);
+
+  // Blend mode and opacity
+  if (d.blendMode) rect.blendMode = d.blendMode;
+  if (d.opacity !== undefined) rect.opacity = d.opacity;
+  if (d.visible !== undefined) rect.visible = d.visible;
+  if (d.locked !== undefined) rect.locked = d.locked;
+  if (d.rotation !== undefined) rect.rotation = d.rotation;
+
+  // Constraints
+  if (d.constraints) {
+    rect.constraints = d.constraints;
   }
 
-  if (d.cornerRadius !== undefined) {
-    rect.cornerRadius = d.cornerRadius;
-  }
+  // Parent
+  const parent = getParent(d, parentNode);
+  if (parent) parent.appendChild(rect);
 
-  if (d.stroke) {
-    applyStroke(rect, d.stroke);
-  } else if (d.strokeColor) {
-    applyStroke(rect, { color: d.strokeColor, weight: d.strokeWeight || 1 });
-  }
-
-  const parent = getParentNode(d as Record<string, unknown>, _parentNode);
-  if (parent) {
-    parent.appendChild(rect);
-  }
-
-  if (cmd.id) nodeRegistry.set(cmd.id, rect);
+  registerNode(cmd, rect);
   return rect;
 }
 
 // ============ ELLIPSE ============
-export function createEllipse(cmd: Command, _parentNode?: SceneNode): EllipseNode {
+
+export async function createEllipse(cmd: Command, parentNode?: SceneNode): Promise<EllipseNode> {
   const d = (cmd.data || {}) as EllipseData;
   const ellipse = figma.createEllipse();
 
@@ -120,70 +166,373 @@ export function createEllipse(cmd: Command, _parentNode?: SceneNode): EllipseNod
   ellipse.y = defaultVal(d.y, 0);
   ellipse.resize(defaultVal(d.width, 100), defaultVal(d.height, 100));
 
-  if (d.fills) {
-    applyFills(ellipse, d.fills);
-  } else if (d.fillColor || d.fill) {
-    ellipse.fills = solidPaint((d.fillColor || d.fill)!);
+  // Arc data
+  if (d.arcData) {
+    ellipse.arcData = d.arcData;
   }
 
-  if (d.stroke) {
-    applyStroke(ellipse, d.stroke);
-  } else if (d.strokeColor) {
-    applyStroke(ellipse, { color: d.strokeColor, weight: d.strokeWeight || 1 });
+  // Corner radius
+  if (d.cornerRadius !== undefined) ellipse.cornerRadius = d.cornerRadius;
+  if (d.cornerSmoothing !== undefined) ellipse.cornerSmoothing = d.cornerSmoothing;
+
+  // Fills, strokes, effects
+  await applyFills(ellipse, d);
+  await applyStrokes(ellipse, d);
+  await applyEffects(ellipse, d);
+
+  // Blend mode and opacity
+  if (d.blendMode) ellipse.blendMode = d.blendMode;
+  if (d.opacity !== undefined) ellipse.opacity = d.opacity;
+  if (d.visible !== undefined) ellipse.visible = d.visible;
+  if (d.locked !== undefined) ellipse.locked = d.locked;
+  if (d.rotation !== undefined) ellipse.rotation = d.rotation;
+
+  // Constraints
+  if (d.constraints) {
+    ellipse.constraints = d.constraints;
   }
 
-  const parent = getParentNode(d as Record<string, unknown>, _parentNode);
-  if (parent) {
-    parent.appendChild(ellipse);
-  }
+  // Parent
+  const parent = getParent(d, parentNode);
+  if (parent) parent.appendChild(ellipse);
 
-  if (cmd.id) nodeRegistry.set(cmd.id, ellipse);
+  registerNode(cmd, ellipse);
   return ellipse;
 }
 
+// ============ POLYGON ============
+
+export async function createPolygon(cmd: Command, parentNode?: SceneNode): Promise<PolygonNode> {
+  const d = (cmd.data || {}) as PolygonData;
+  const polygon = figma.createPolygon();
+
+  polygon.name = defaultVal(d.name, 'Polygon');
+  polygon.x = defaultVal(d.x, 0);
+  polygon.y = defaultVal(d.y, 0);
+  polygon.resize(defaultVal(d.width, 100), defaultVal(d.height, 100));
+
+  // Point count
+  polygon.pointCount = defaultVal(d.pointCount, 6);
+
+  // Corner radius
+  if (d.cornerRadius !== undefined) polygon.cornerRadius = d.cornerRadius;
+  if (d.cornerSmoothing !== undefined) polygon.cornerSmoothing = d.cornerSmoothing;
+
+  // Fills, strokes, effects
+  await applyFills(polygon, d);
+  await applyStrokes(polygon, d);
+  await applyEffects(polygon, d);
+
+  // Blend mode and opacity
+  if (d.blendMode) polygon.blendMode = d.blendMode;
+  if (d.opacity !== undefined) polygon.opacity = d.opacity;
+  if (d.visible !== undefined) polygon.visible = d.visible;
+  if (d.locked !== undefined) polygon.locked = d.locked;
+  if (d.rotation !== undefined) polygon.rotation = d.rotation;
+
+  // Constraints
+  if (d.constraints) {
+    polygon.constraints = d.constraints;
+  }
+
+  // Parent
+  const parent = getParent(d, parentNode);
+  if (parent) parent.appendChild(polygon);
+
+  registerNode(cmd, polygon);
+  return polygon;
+}
+
+// ============ STAR ============
+
+export async function createStar(cmd: Command, parentNode?: SceneNode): Promise<StarNode> {
+  const d = (cmd.data || {}) as StarData;
+  const star = figma.createStar();
+
+  star.name = defaultVal(d.name, 'Star');
+  star.x = defaultVal(d.x, 0);
+  star.y = defaultVal(d.y, 0);
+  star.resize(defaultVal(d.width, 100), defaultVal(d.height, 100));
+
+  // Point count and inner radius
+  star.pointCount = defaultVal(d.pointCount, 5);
+  star.innerRadius = defaultVal(d.innerRadius, 0.38);
+
+  // Corner radius
+  if (d.cornerRadius !== undefined) star.cornerRadius = d.cornerRadius;
+  if (d.cornerSmoothing !== undefined) star.cornerSmoothing = d.cornerSmoothing;
+
+  // Fills, strokes, effects
+  await applyFills(star, d);
+  await applyStrokes(star, d);
+  await applyEffects(star, d);
+
+  // Blend mode and opacity
+  if (d.blendMode) star.blendMode = d.blendMode;
+  if (d.opacity !== undefined) star.opacity = d.opacity;
+  if (d.visible !== undefined) star.visible = d.visible;
+  if (d.locked !== undefined) star.locked = d.locked;
+  if (d.rotation !== undefined) star.rotation = d.rotation;
+
+  // Constraints
+  if (d.constraints) {
+    star.constraints = d.constraints;
+  }
+
+  // Parent
+  const parent = getParent(d, parentNode);
+  if (parent) parent.appendChild(star);
+
+  registerNode(cmd, star);
+  return star;
+}
+
 // ============ LINE ============
-export function createLine(cmd: Command, _parentNode?: SceneNode): LineNode {
+
+export async function createLine(cmd: Command, parentNode?: SceneNode): Promise<LineNode> {
   const d = (cmd.data || {}) as LineData;
   const line = figma.createLine();
 
   line.name = defaultVal(d.name, 'Line');
   line.x = defaultVal(d.x, 0);
   line.y = defaultVal(d.y, 0);
+  line.resize(defaultVal(d.length ?? d.width, 100), 0);
 
-  const length = defaultVal(d.length, 100);
-  line.resize(length, 0);
+  // Rotation
+  if (d.rotation !== undefined) line.rotation = d.rotation;
 
-  if (d.rotation) {
-    line.rotation = d.rotation;
-  }
-
+  // Stroke (lines use stroke instead of fill)
   if (d.color) {
-    line.strokes = solidPaint(d.color);
-  }
-  line.strokeWeight = defaultVal(d.weight, 1);
-
-  if (d.dashPattern) {
-    line.dashPattern = d.dashPattern;
-  }
-
-  const parent = getParentNode(d as Record<string, unknown>, _parentNode);
-  if (parent) {
-    parent.appendChild(line);
+    line.strokes = [{
+      type: 'SOLID',
+      color: parseColorInput(d.color),
+      opacity: 1,
+      blendMode: 'NORMAL'
+    }];
+  } else {
+    await applyStrokes(line, d);
   }
 
-  if (cmd.id) nodeRegistry.set(cmd.id, line);
+  // Stroke weight
+  line.strokeWeight = d.weight ?? d.strokeWeight ?? 1;
+
+  // Dash pattern
+  if (d.dashPattern) line.dashPattern = d.dashPattern;
+
+  // Blend mode and opacity
+  if (d.blendMode) line.blendMode = d.blendMode;
+  if (d.opacity !== undefined) line.opacity = d.opacity;
+  if (d.visible !== undefined) line.visible = d.visible;
+  if (d.locked !== undefined) line.locked = d.locked;
+
+  // Constraints
+  if (d.constraints) {
+    line.constraints = d.constraints;
+  }
+
+  // Parent
+  const parent = getParent(d, parentNode);
+  if (parent) parent.appendChild(line);
+
+  registerNode(cmd, line);
   return line;
 }
 
-// ============ GROUP ============
-export function createGroup(cmd: Command): FrameNode {
-  const d = (cmd.data || {}) as GroupData;
-  const frame = figma.createFrame();
+// ============ VECTOR ============
 
+export async function createVector(cmd: Command, parentNode?: SceneNode): Promise<VectorNode> {
+  const d = (cmd.data || {}) as VectorData;
+  const vector = figma.createVector();
+
+  vector.name = defaultVal(d.name, 'Vector');
+  vector.x = defaultVal(d.x, 0);
+  vector.y = defaultVal(d.y, 0);
+
+  if (d.width !== undefined && d.height !== undefined) {
+    vector.resize(d.width, d.height);
+  }
+
+  // Vector paths
+  if (d.vectorPaths && d.vectorPaths.length > 0) {
+    vector.vectorPaths = d.vectorPaths.map(path => ({
+      windingRule: path.windingRule as 'NONZERO' | 'EVENODD',
+      data: path.data
+    }));
+  }
+
+  // Vector network
+  if (d.vectorNetwork) {
+    vector.vectorNetwork = {
+      vertices: d.vectorNetwork.vertices.map(v => ({
+        x: v.x,
+        y: v.y,
+        strokeCap: v.strokeCap as StrokeCap | undefined,
+        cornerRadius: v.cornerRadius
+      })),
+      segments: d.vectorNetwork.segments.map(s => ({
+        start: s.start,
+        end: s.end,
+        tangentStart: s.tangentStart,
+        tangentEnd: s.tangentEnd
+      })),
+      regions: []
+    };
+  }
+
+  // Corner radius
+  if (d.cornerRadius !== undefined) vector.cornerRadius = d.cornerRadius;
+  if (d.cornerSmoothing !== undefined) vector.cornerSmoothing = d.cornerSmoothing;
+
+  // Fills, strokes, effects
+  await applyFills(vector, d);
+  await applyStrokes(vector, d);
+  await applyEffects(vector, d);
+
+  // Blend mode and opacity
+  if (d.blendMode) vector.blendMode = d.blendMode;
+  if (d.opacity !== undefined) vector.opacity = d.opacity;
+  if (d.visible !== undefined) vector.visible = d.visible;
+  if (d.locked !== undefined) vector.locked = d.locked;
+  if (d.rotation !== undefined) vector.rotation = d.rotation;
+
+  // Constraints
+  if (d.constraints) {
+    vector.constraints = d.constraints;
+  }
+
+  // Parent
+  const parent = getParent(d, parentNode);
+  if (parent) parent.appendChild(vector);
+
+  registerNode(cmd, vector);
+  return vector;
+}
+
+// ============ SECTION ============
+
+export async function createSection(cmd: Command): Promise<SectionNode> {
+  const d = (cmd.data || {}) as SectionData;
+  const section = figma.createSection();
+
+  section.name = defaultVal(d.name, 'Section');
+  section.x = defaultVal(d.x, 0);
+  section.y = defaultVal(d.y, 0);
+
+  if (d.width !== undefined && d.height !== undefined) {
+    section.resizeWithoutConstraints(d.width, d.height);
+  }
+
+  // Section fills
+  if (d.fillStyleId) {
+    const style = figma.getStyleById(d.fillStyleId);
+    if (style && style.type === 'PAINT') {
+      (section as unknown as { fillStyleId: string }).fillStyleId = style.id;
+    }
+  } else if (d.fills && d.fills.length > 0) {
+    const firstFill = d.fills[0];
+    if (!firstFill.type || firstFill.type === 'SOLID') {
+      section.fills = [{
+        type: 'SOLID',
+        color: parseColorInput((firstFill as { color: string }).color)
+      }];
+    }
+  } else if (d.fill) {
+    section.fills = [{
+      type: 'SOLID',
+      color: parseColorInput(d.fill)
+    }];
+  }
+
+  // Dev status (only set if not NONE)
+  if (d.devStatus && d.devStatus.type !== 'NONE') {
+    section.devStatus = d.devStatus as DevStatus;
+  }
+
+  // Section contents hidden
+  if (d.sectionContentsHidden !== undefined) {
+    section.sectionContentsHidden = d.sectionContentsHidden;
+  }
+
+  if (d.visible !== undefined) section.visible = d.visible;
+  if (d.locked !== undefined) section.locked = d.locked;
+
+  registerNode(cmd, section);
+  return section;
+}
+
+// ============ SLICE ============
+
+export async function createSlice(cmd: Command, parentNode?: SceneNode): Promise<SliceNode> {
+  const d = (cmd.data || {}) as SliceData;
+  const slice = figma.createSlice();
+
+  slice.name = defaultVal(d.name, 'Slice');
+  slice.x = defaultVal(d.x, 0);
+  slice.y = defaultVal(d.y, 0);
+  slice.resize(defaultVal(d.width, 100), defaultVal(d.height, 100));
+
+  // Export settings
+  if (d.exportSettings && d.exportSettings.length > 0) {
+    slice.exportSettings = d.exportSettings.map(setting => ({
+      format: setting.format,
+      suffix: setting.suffix || '',
+      contentsOnly: setting.contentsOnly ?? true,
+      constraint: setting.constraint
+    }));
+  }
+
+  if (d.visible !== undefined) slice.visible = d.visible;
+  if (d.locked !== undefined) slice.locked = d.locked;
+
+  // Parent
+  const parent = getParent(d, parentNode);
+  if (parent) parent.appendChild(slice);
+
+  registerNode(cmd, slice);
+  return slice;
+}
+
+// ============ SVG IMPORT ============
+
+export async function createFromSvg(cmd: Command, parentNode?: SceneNode): Promise<FrameNode> {
+  const d = (cmd.data || {}) as SvgImportData;
+
+  if (!d.svg) {
+    throw new Error('SVG content is required');
+  }
+
+  const svgNode = figma.createNodeFromSvg(d.svg);
+
+  svgNode.name = defaultVal(d.name, 'SVG');
+  svgNode.x = defaultVal(d.x, 0);
+  svgNode.y = defaultVal(d.y, 0);
+
+  if (d.visible !== undefined) svgNode.visible = d.visible;
+  if (d.locked !== undefined) svgNode.locked = d.locked;
+
+  // Parent
+  const parent = getParent(d, parentNode);
+  if (parent) parent.appendChild(svgNode);
+
+  registerNode(cmd, svgNode);
+  return svgNode;
+}
+
+// ============ GROUP ============
+
+export async function createGroup(cmd: Command): Promise<FrameNode> {
+  const d = (cmd.data || {}) as GroupData;
+
+  // Create a frame as container (groups need existing nodes to wrap)
+  const frame = figma.createFrame();
   frame.name = defaultVal(d.name, 'Group');
   frame.x = defaultVal(d.x, 0);
   frame.y = defaultVal(d.y, 0);
+  frame.fills = [];
 
-  if (cmd.id) nodeRegistry.set(cmd.id, frame);
+  if (d.visible !== undefined) frame.visible = d.visible;
+  if (d.locked !== undefined) frame.locked = d.locked;
+
+  registerNode(cmd, frame);
   return frame;
 }

@@ -93,3 +93,7 @@ The project uses separate tsconfig files:
 - Server runs on port 3456 (HTTP + WebSocket)
 - Commands timeout after 120 seconds
 - The plugin maintains a node registry for referencing created elements by ID
+
+## Current Task Plan
+
+See [.claude/tasks/figma-plugin-api-implementation.md](.claude/tasks/figma-plugin-api-implementation.md) for the comprehensive implementation plan to achieve full Figma Plugin API coverage.

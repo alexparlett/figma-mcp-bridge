@@ -1,106 +1,81 @@
 /// <reference types="@figma/plugin-typings" />
 
-import type { Command, CommandResult, SerializedNode, QueryData, FindNodesData, NodeRefData } from "../../types/types.js";
+import type { Command, QueryData, FindNodesData, NodeRefData } from "../../types/commands.js";
+import type { CommandResult } from "../../types/messages.js";
+import type { SceneNode as SerializedSceneNode } from "../../types/nodes.js";
 import { nodeRegistry } from "../registry.js";
 import { defaultVal, colorToHex } from "../utils.js";
 
-// ============ HELPER: Serialize node ============
-export function serializeNode(node: BaseNode, depth: number, maxDepth: number): SerializedNode | null {
+// ============ HELPER: Serialize node to SceneNode ============
+export function serializeNode(node: BaseNode, depth: number, maxDepth: number): SerializedSceneNode | null {
   if (!node) return null;
-
-  const result: SerializedNode = {
-    id: node.id,
-    name: node.name,
-    type: node.type
-  };
 
   const sceneNode = node as SceneNode;
 
-  if ('x' in sceneNode) result.x = sceneNode.x;
-  if ('y' in sceneNode) result.y = sceneNode.y;
-  if ('width' in sceneNode) result.width = sceneNode.width;
-  if ('height' in sceneNode) result.height = sceneNode.height;
+  // Base properties all nodes have
+  const base = {
+    id: node.id,
+    name: node.name,
+    type: node.type,
+  };
 
-  if ('fills' in sceneNode) {
-    const fills = (sceneNode as GeometryMixin).fills;
-    if (fills && Array.isArray(fills) && fills.length > 0) {
-      result.fills = fills.map(f => {
-        if (f.type === 'SOLID') {
-          return { type: 'SOLID', color: colorToHex(f.color), opacity: f.opacity };
-        }
-        return { type: f.type };
-      });
-    }
-  }
+  // Helper to serialize children if within depth limit
+  const serializeChildren = (): SerializedSceneNode[] | undefined => {
+    if (!('children' in sceneNode) || depth >= maxDepth) return undefined;
+    const children = (sceneNode as ChildrenMixin).children
+      .map(child => serializeNode(child, depth + 1, maxDepth))
+      .filter((c): c is SerializedSceneNode => c !== null);
+    return children.length > 0 ? children : undefined;
+  };
 
-  if ('strokes' in sceneNode) {
-    const strokes = (sceneNode as MinimalStrokesMixin).strokes;
-    if (strokes && strokes.length > 0) {
-      result.strokes = strokes.map(s => {
-        if (s.type === 'SOLID') {
-          return { type: 'SOLID', color: colorToHex(s.color), opacity: s.opacity };
+  // Copy all serializable properties from the Figma node
+  // We spread the node and filter out non-serializable values
+  const serializeProps = (figmaNode: SceneNode): Record<string, unknown> => {
+    const props: Record<string, unknown> = {};
+
+    for (const key of Object.keys(figmaNode)) {
+      // Skip internal/non-serializable properties
+      if (key === 'parent' || key === 'children' || key === 'removed' || key.startsWith('__')) {
+        continue;
+      }
+
+      try {
+        const value = (figmaNode as unknown as Record<string, unknown>)[key];
+
+        // Skip functions and symbols
+        if (typeof value === 'function' || typeof value === 'symbol') {
+          continue;
         }
-        return { type: s.type };
-      });
-      result.strokeWeight = (sceneNode as MinimalStrokesMixin).strokeWeight as number;
-      result.strokeAlign = (sceneNode as MinimalStrokesMixin).strokeAlign;
-      const dashPattern = (sceneNode as MinimalStrokesMixin).dashPattern;
-      if (dashPattern && dashPattern.length > 0) {
-        result.dashPattern = dashPattern;
+
+        // Skip undefined values
+        if (value === undefined) {
+          continue;
+        }
+
+        // Handle mixed values - just skip them or use a sensible default
+        if (value === figma.mixed) {
+          continue;
+        }
+
+        // Store the value
+        props[key] = value;
+      } catch {
+        // Some properties may throw when accessed - skip them
+        continue;
       }
     }
-  }
 
-  if ('cornerRadius' in sceneNode) {
-    result.cornerRadius = (sceneNode as RectangleNode).cornerRadius as number;
-  }
+    return props;
+  };
 
-  if (node.type === 'TEXT') {
-    const textNode = node as TextNode;
-    result.characters = textNode.characters;
-    result.fontSize = textNode.fontSize as number;
-    if (textNode.fontName && textNode.fontName !== figma.mixed) {
-      result.fontFamily = (textNode.fontName as FontName).family;
-      result.fontStyle = (textNode.fontName as FontName).style;
-    }
-  }
+  const props = serializeProps(sceneNode);
+  const children = serializeChildren();
 
-  if ('layoutMode' in sceneNode) {
-    const frameNode = sceneNode as FrameNode;
-    if (frameNode.layoutMode !== 'NONE') {
-      result.layoutMode = frameNode.layoutMode;
-      result.itemSpacing = frameNode.itemSpacing;
-      result.padding = {
-        top: frameNode.paddingTop,
-        right: frameNode.paddingRight,
-        bottom: frameNode.paddingBottom,
-        left: frameNode.paddingLeft
-      };
-      result.primaryAxisAlign = frameNode.primaryAxisAlignItems;
-      result.counterAxisAlign = frameNode.counterAxisAlignItems;
-    }
-  }
-
-  if (node.type === 'COMPONENT') {
-    result.isComponent = true;
-  }
-  if (node.type === 'INSTANCE') {
-    result.isInstance = true;
-    const instanceNode = node as InstanceNode;
-    if (instanceNode.mainComponent) {
-      result.mainComponentId = instanceNode.mainComponent.id;
-      result.mainComponentName = instanceNode.mainComponent.name;
-    }
-  }
-
-  if ('children' in node && depth < maxDepth) {
-    const childrenNode = node as ChildrenMixin;
-    result.children = childrenNode.children
-      .map(child => serializeNode(child, depth + 1, maxDepth))
-      .filter((c): c is SerializedNode => c !== null);
-  }
-
-  return result;
+  return {
+    ...base,
+    ...props,
+    ...(children ? { children } : {}),
+  } as SerializedSceneNode;
 }
 
 // ============ GET NODE BY NAME ============
@@ -121,7 +96,7 @@ export function getNodeByName(cmd: Command): CommandResult {
 
   const queryData = d as QueryData & NodeRefData;
   const maxDepth = defaultVal(queryData.depth, 3);
-  return { success: true, data: serializeNode(node, 0, maxDepth) as Record<string, unknown> };
+  return { success: true, node: serializeNode(node, 0, maxDepth) ?? undefined };
 }
 
 // ============ GET SELECTION ============
@@ -131,17 +106,19 @@ export function getSelection(cmd: Command): CommandResult {
   const maxDepth = defaultVal(d.depth, 3);
 
   if (selection.length === 0) {
-    return { success: true, data: { selection: [], count: 0 } };
+    return { success: true, nodes: [] };
   }
 
-  const nodes = selection.map(node => {
-    if (d.register) {
-      nodeRegistry.set(node.name, node);
-    }
-    return serializeNode(node, 0, maxDepth);
-  });
+  const nodes = selection
+    .map(node => {
+      if (d.register) {
+        nodeRegistry.set(node.name, node);
+      }
+      return serializeNode(node, 0, maxDepth);
+    })
+    .filter((n): n is SerializedSceneNode => n !== null);
 
-  return { success: true, data: { selection: nodes, count: nodes.length } };
+  return { success: true, nodes };
 }
 
 // ============ GET PAGE NODES ============
@@ -153,15 +130,12 @@ export function getPageNodes(cmd: Command): CommandResult {
   const nodes = figma.currentPage.children
     .filter(node => !filter || node.type === filter)
     .map(node => serializeNode(node, 0, maxDepth))
-    .filter((n): n is SerializedNode => n !== null);
+    .filter((n): n is SerializedSceneNode => n !== null);
 
   return {
     success: true,
-    data: {
-      page: figma.currentPage.name,
-      nodes,
-      count: nodes.length
-    }
+    nodes,
+    data: { page: figma.currentPage.name }
   };
 }
 
@@ -181,13 +155,13 @@ export function getNodeById(cmd: Command): CommandResult {
     nodeRegistry.set(cmd.id, node);
   }
 
-  return { success: true, data: serializeNode(node, 0, maxDepth) as Record<string, unknown> };
+  return { success: true, node: serializeNode(node, 0, maxDepth) ?? undefined };
 }
 
 // ============ FIND NODES ============
 export function findNodes(cmd: Command): CommandResult {
   const d = (cmd.data || {}) as FindNodesData;
-  const results: SerializedNode[] = [];
+  const results: SerializedSceneNode[] = [];
   const maxResults = defaultVal(d.maxResults, 50);
   const maxDepth = defaultVal(d.depth, 1);
   const searchName = d.name;
@@ -227,11 +201,8 @@ export function findNodes(cmd: Command): CommandResult {
 
   return {
     success: true,
-    data: {
-      results,
-      count: results.length,
-      truncated: results.length >= maxResults
-    }
+    nodes: results,
+    data: { truncated: results.length >= maxResults }
   };
 }
 
@@ -281,7 +252,7 @@ export function getStyles(cmd: Command): CommandResult {
 // ============ GET COMPONENTS ============
 export function getComponents(cmd: Command): CommandResult {
   const d = (cmd.data || {}) as QueryData;
-  const components: SerializedNode[] = [];
+  const components: SerializedSceneNode[] = [];
   const maxDepth = defaultVal(d.depth, 2);
 
   function findComponentsInNode(node: BaseNode) {
@@ -299,7 +270,7 @@ export function getComponents(cmd: Command): CommandResult {
 
   figma.currentPage.children.forEach(findComponentsInNode);
 
-  return { success: true, data: { components, count: components.length } };
+  return { success: true, nodes: components };
 }
 
 // ============ GET VARIABLES ============

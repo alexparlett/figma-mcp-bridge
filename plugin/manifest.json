@@ -10,8 +10,7 @@
   "name": "Figma Mcp Bridge",
   "networkAccess": {
     "allowedDomains": [
-      "ws://localhost:3456",
-      "http://localhost:3456"
+      "ws://localhost:3456"
     ],
     "reasoning": "Connects to local MCP bridge server to receive design commands from Claude"
   },

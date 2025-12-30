@@ -1,68 +1,98 @@
 /// <reference types="@figma/plugin-typings" />
 
-import type { Command, StyleData, VariableCollectionData, VariableData } from "../../types/types.js";
-import { nodeRegistry } from "../registry.js";
-import { defaultVal, solidPaint, parseColor } from "../utils.js";
+/**
+ * Style and variable handlers for Figma MCP Bridge.
+ */
 
-// ============ CREATE STYLE ============
-export function createStyle(cmd: Command): Promise<BaseStyle> {
+import type { Command } from "../../types/commands.js";
+import type { StyleData, VariableCollectionData, VariableData } from "../../types/data.js";
+import { styleRegistry } from "../registry.js";
+import { defaultVal, parseColorInput, parseHexColor, convertEffectInputs } from "../utils.js";
+
+// ============ CREATE TEXT STYLE ============
+
+export async function createTextStyle(cmd: Command): Promise<TextStyle> {
   const d = (cmd.data || {}) as StyleData;
 
-  return new Promise((resolve, reject) => {
-    const styleType = d.styleType;
+  const style = figma.createTextStyle();
+  style.name = d.name;
 
-    if (styleType === 'TEXT') {
-      const style = figma.createTextStyle();
-      style.name = d.name;
+  const fontFamily = defaultVal(d.fontFamily, 'Inter');
+  const fontStyle = defaultVal(d.fontStyle, 'Regular');
 
-      const fontFamily = defaultVal(d.fontFamily, 'Inter');
-      const fontStyle = defaultVal(d.fontStyle, 'Regular');
+  try {
+    await figma.loadFontAsync({ family: fontFamily, style: fontStyle });
+  } catch {
+    await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
+  }
 
-      figma.loadFontAsync({ family: fontFamily, style: fontStyle }).then(() => {
-        style.fontName = { family: fontFamily, style: fontStyle };
-        style.fontSize = defaultVal(d.fontSize, 16);
-        if (d.lineHeight && typeof d.lineHeight === 'number') {
-          style.lineHeight = { value: d.lineHeight, unit: 'PIXELS' };
-        }
-        if (d.letterSpacing) {
-          style.letterSpacing = { value: d.letterSpacing, unit: 'PIXELS' };
-        }
-        if (d.textCase) {
-          style.textCase = d.textCase;
-        }
+  style.fontName = { family: fontFamily, style: fontStyle };
+  style.fontSize = defaultVal(d.fontSize, 16);
 
-        if (cmd.id) nodeRegistry.set(cmd.id, style as unknown as BaseNode);
-        resolve(style);
-      }).catch(reject);
-      return;
+  if (d.lineHeight !== undefined) {
+    if (typeof d.lineHeight === 'number') {
+      style.lineHeight = { value: d.lineHeight, unit: 'PIXELS' };
+    } else {
+      style.lineHeight = d.lineHeight;
     }
+  }
 
-    if (styleType === 'PAINT') {
-      const paintStyle = figma.createPaintStyle();
-      paintStyle.name = d.name;
-      paintStyle.paints = solidPaint(d.color!);
-
-      if (cmd.id) nodeRegistry.set(cmd.id, paintStyle as unknown as BaseNode);
-      resolve(paintStyle);
-      return;
+  if (d.letterSpacing !== undefined) {
+    if (typeof d.letterSpacing === 'number') {
+      style.letterSpacing = { value: d.letterSpacing, unit: 'PIXELS' };
+    } else {
+      style.letterSpacing = d.letterSpacing;
     }
+  }
 
-    if (styleType === 'EFFECT') {
-      const effectStyle = figma.createEffectStyle();
-      effectStyle.name = d.name;
-      effectStyle.effects = defaultVal(d.effects, []) as Effect[];
+  if (d.paragraphSpacing !== undefined) style.paragraphSpacing = d.paragraphSpacing;
+  if (d.textCase) style.textCase = d.textCase;
+  if (d.textDecoration) style.textDecoration = d.textDecoration;
 
-      if (cmd.id) nodeRegistry.set(cmd.id, effectStyle as unknown as BaseNode);
-      resolve(effectStyle);
-      return;
-    }
+  if (cmd.id) styleRegistry.set(cmd.id, style);
+  return style;
+}
 
-    reject(new Error('Unknown style type: ' + styleType));
-  });
+// ============ CREATE COLOR STYLE ============
+
+export async function createColorStyle(cmd: Command): Promise<PaintStyle> {
+  const d = (cmd.data || {}) as StyleData;
+
+  const style = figma.createPaintStyle();
+  style.name = d.name;
+
+  if (d.color) {
+    style.paints = [{
+      type: 'SOLID',
+      color: parseColorInput(d.color),
+      opacity: 1,
+      blendMode: 'NORMAL'
+    }];
+  }
+
+  if (cmd.id) styleRegistry.set(cmd.id, style);
+  return style;
+}
+
+// ============ CREATE EFFECT STYLE ============
+
+export async function createEffectStyle(cmd: Command): Promise<EffectStyle> {
+  const d = (cmd.data || {}) as StyleData;
+
+  const style = figma.createEffectStyle();
+  style.name = d.name;
+
+  if (d.effects && d.effects.length > 0) {
+    style.effects = convertEffectInputs(d.effects);
+  }
+
+  if (cmd.id) styleRegistry.set(cmd.id, style);
+  return style;
 }
 
 // ============ CREATE VARIABLE COLLECTION ============
-export function createVariableCollection(cmd: Command): VariableCollection {
+
+export async function createVariableCollection(cmd: Command): Promise<VariableCollection> {
   const d = (cmd.data || {}) as VariableCollectionData;
   const collection = figma.variables.createVariableCollection(d.name);
 
@@ -74,15 +104,16 @@ export function createVariableCollection(cmd: Command): VariableCollection {
     }
   }
 
-  if (cmd.id) nodeRegistry.set(cmd.id, collection as unknown as BaseNode);
+  if (cmd.id) styleRegistry.set(cmd.id, collection);
   return collection;
 }
 
 // ============ CREATE VARIABLE ============
-export function createVariable(cmd: Command): Variable {
+
+export async function createVariable(cmd: Command): Promise<Variable> {
   const d = (cmd.data || {}) as VariableData;
   const collectionId = d.collectionId;
-  const collection = nodeRegistry.get(collectionId) as unknown as VariableCollection;
+  const collection = styleRegistry.get(collectionId) as unknown as VariableCollection;
 
   if (!collection) {
     throw new Error('Collection not found: ' + collectionId);
@@ -92,14 +123,12 @@ export function createVariable(cmd: Command): Variable {
   const variable = figma.variables.createVariable(d.name, collection, resolvedType);
 
   if (d.values) {
-    const modeNames = Object.keys(d.values);
-    for (const modeName of modeNames) {
-      const value = d.values[modeName];
+    for (const [modeName, value] of Object.entries(d.values)) {
       const mode = collection.modes.find(m => m.name === modeName);
 
       if (mode) {
-        if (resolvedType === 'COLOR') {
-          variable.setValueForMode(mode.modeId, parseColor(value as string));
+        if (resolvedType === 'COLOR' && typeof value === 'string') {
+          variable.setValueForMode(mode.modeId, parseHexColor(value));
         } else {
           variable.setValueForMode(mode.modeId, value as VariableValue);
         }
@@ -107,6 +136,6 @@ export function createVariable(cmd: Command): Variable {
     }
   }
 
-  if (cmd.id) nodeRegistry.set(cmd.id, variable as unknown as BaseNode);
+  if (cmd.id) styleRegistry.set(cmd.id, variable);
   return variable;
 }

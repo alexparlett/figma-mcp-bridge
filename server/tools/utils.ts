@@ -1,4 +1,4 @@
-import type { Command } from "../../types/types.js";
+import type { Command } from "../../types/commands.js";
 
 export function processData(data: Record<string, unknown>): Record<string, unknown> {
   const result = { ...data };

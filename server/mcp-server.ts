@@ -2,8 +2,8 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { CommandQueue } from "./queue.js";
-import { toolDefinitions } from "./tools/definitions.js";
-import { handleToolCall } from "./tools/handlers.js";
+import { generatedTools } from "./tools/generated-schemas.js";
+import { handleToolCall } from "./tools/handlers/index.js";
 
 export interface McpServerConfig {
   queue: CommandQueue;
@@ -36,7 +36,11 @@ export class McpServer {
 
   private setupHandlers(): void {
     this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: toolDefinitions,
+      tools: generatedTools.map(t => ({
+        name: t.name,
+        description: t.description,
+        inputSchema: t.inputSchema,
+      })),
     }));
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {

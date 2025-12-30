@@ -1,7 +1,7 @@
 import { WebSocketServer as WSServer, WebSocket } from "ws";
 import type { Server as HttpServer } from "http";
 import type { CommandQueue } from "./queue.js";
-import type { TaggedCommand, WebSocketMessage } from "../types/types.js";
+import type { TaggedCommand, WebSocketMessage } from "../types/messages.js";
 
 export interface WebSocketServerConfig {
   queue: CommandQueue;

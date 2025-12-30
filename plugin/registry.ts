@@ -3,4 +3,6 @@
 // Node and style registries for referencing created elements
 
 export const nodeRegistry = new Map<string, BaseNode>();
-export const styleRegistry = new Map<string, PaintStyle>();
+
+// Style registry can hold any style type, variable collection, or variable
+export const styleRegistry = new Map<string, BaseStyle | VariableCollection | Variable>();

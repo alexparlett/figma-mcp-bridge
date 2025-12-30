@@ -1,30 +1,17 @@
-// Geometry, constraints, and stroke types
+// Geometry, constraints, and vector types
 
+// ============ Stroke Geometry Types ============
+export type StrokeCap = 'NONE' | 'ROUND' | 'SQUARE' | 'ARROW_LINES' | 'ARROW_EQUILATERAL';
+export type StrokeJoin = 'MITER' | 'BEVEL' | 'ROUND';
+export type StrokeAlign = 'INSIDE' | 'OUTSIDE' | 'CENTER';
+
+// ============ Constraint Types ============
 export type HorizontalConstraint = 'MIN' | 'CENTER' | 'MAX' | 'STRETCH' | 'SCALE';
 export type VerticalConstraint = 'MIN' | 'CENTER' | 'MAX' | 'STRETCH' | 'SCALE';
 
 export interface Constraints {
   horizontal: HorizontalConstraint;
   vertical: VerticalConstraint;
-}
-
-export type StrokeCap = 'NONE' | 'ROUND' | 'SQUARE' | 'LINE_ARROW' | 'TRIANGLE_ARROW' | 'DIAMOND_FILLED' | 'CIRCLE_FILLED' | 'TRIANGLE_FILLED';
-export type StrokeJoin = 'MITER' | 'BEVEL' | 'ROUND';
-export type StrokeAlign = 'INSIDE' | 'OUTSIDE' | 'CENTER';
-
-export interface StrokeConfig {
-  color: string;
-  weight?: number;
-  opacity?: number;
-  align?: StrokeAlign;
-  cap?: StrokeCap;
-  join?: StrokeJoin;
-  miterLimit?: number;
-  dashPattern?: number[];
-  topWeight?: number;
-  rightWeight?: number;
-  bottomWeight?: number;
-  leftWeight?: number;
 }
 
 export interface CornerRadiusConfig {
@@ -68,4 +55,5 @@ export interface ArcData {
   innerRadius: number;
 }
 
+// Transform matrix type
 export type Transform = [[number, number, number], [number, number, number]];

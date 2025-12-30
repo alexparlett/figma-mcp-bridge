@@ -182,3 +182,251 @@ export interface ImageConfig extends BaseNodeConfig {
   imageData?: Uint8Array;
   imageUrl?: string; // For async loading
 }
+
+// ============ SceneNode Types (Query Results) ============
+// These types represent nodes returned from queries, matching Figma's SceneNode structure.
+
+import type {
+  FrameData,
+  RectangleData,
+  EllipseData,
+  PolygonData,
+  StarData,
+  LineData,
+  VectorData,
+  TextData,
+  ComponentData,
+  ComponentSetData,
+  InstanceData,
+  GroupData,
+  SectionData,
+  SliceData,
+  ConnectorData,
+  StickyData,
+  ShapeWithTextData,
+  CodeBlockData,
+  TableData,
+  StampData,
+  HighlightData,
+  WashiTapeData,
+  EmbedData,
+  LinkUnfurlData,
+  MediaData,
+  SlideData,
+  SlideRowData,
+  SlideGridData,
+  InteractiveSlideElementData,
+  WidgetData,
+  TextPathData,
+  TransformGroupData,
+} from './data.js';
+
+/** Base properties for all queried nodes */
+export interface BaseSceneNode {
+  id: string;
+  name: string;
+}
+
+// ============ Container Nodes (can have children) ============
+
+export interface FrameSceneNode extends BaseSceneNode, Omit<FrameData, 'name'> {
+  type: 'FRAME';
+  children?: SceneNode[];
+}
+
+export interface ComponentSceneNode extends BaseSceneNode, Omit<ComponentData, 'name'> {
+  type: 'COMPONENT';
+  children?: SceneNode[];
+}
+
+export interface ComponentSetSceneNode extends BaseSceneNode, Omit<ComponentSetData, 'name'> {
+  type: 'COMPONENT_SET';
+  children?: SceneNode[];
+}
+
+export interface GroupSceneNode extends BaseSceneNode, Omit<GroupData, 'name'> {
+  type: 'GROUP';
+  children?: SceneNode[];
+}
+
+export interface SectionSceneNode extends BaseSceneNode, Omit<SectionData, 'name'> {
+  type: 'SECTION';
+  children?: SceneNode[];
+}
+
+export interface BooleanOperationSceneNode extends BaseSceneNode {
+  type: 'BOOLEAN_OPERATION';
+  booleanOperation: BooleanOperationType;
+  children?: SceneNode[];
+}
+
+export interface TransformGroupSceneNode extends BaseSceneNode, Omit<TransformGroupData, 'name'> {
+  type: 'TRANSFORM_GROUP';
+  children?: SceneNode[];
+}
+
+// ============ Slide Container Nodes ============
+
+export interface SlideSceneNode extends BaseSceneNode, Omit<SlideData, 'name'> {
+  type: 'SLIDE';
+  children?: SceneNode[];
+}
+
+export interface SlideRowSceneNode extends BaseSceneNode, Omit<SlideRowData, 'name'> {
+  type: 'SLIDE_ROW';
+  children?: SceneNode[];
+}
+
+export interface SlideGridSceneNode extends BaseSceneNode, Omit<SlideGridData, 'name'> {
+  type: 'SLIDE_GRID';
+  children?: SceneNode[];
+}
+
+// ============ Shape Nodes (no children) ============
+
+export interface RectangleSceneNode extends BaseSceneNode, Omit<RectangleData, 'name'> {
+  type: 'RECTANGLE';
+}
+
+export interface EllipseSceneNode extends BaseSceneNode, Omit<EllipseData, 'name'> {
+  type: 'ELLIPSE';
+}
+
+export interface PolygonSceneNode extends BaseSceneNode, Omit<PolygonData, 'name'> {
+  type: 'POLYGON';
+}
+
+export interface StarSceneNode extends BaseSceneNode, Omit<StarData, 'name'> {
+  type: 'STAR';
+}
+
+export interface LineSceneNode extends BaseSceneNode, Omit<LineData, 'name'> {
+  type: 'LINE';
+}
+
+export interface VectorSceneNode extends BaseSceneNode, Omit<VectorData, 'name'> {
+  type: 'VECTOR';
+}
+
+export interface TextSceneNode extends BaseSceneNode, Omit<TextData, 'name'> {
+  type: 'TEXT';
+}
+
+export interface TextPathSceneNode extends BaseSceneNode, Omit<TextPathData, 'name'> {
+  type: 'TEXT_PATH';
+}
+
+export interface SliceSceneNode extends BaseSceneNode, Omit<SliceData, 'name'> {
+  type: 'SLICE';
+}
+
+export interface InstanceSceneNode extends BaseSceneNode, Omit<InstanceData, 'name'> {
+  type: 'INSTANCE';
+  mainComponentId?: string;
+  mainComponentName?: string;
+}
+
+// ============ FigJam Nodes ============
+
+export interface ConnectorSceneNode extends BaseSceneNode, Omit<ConnectorData, 'name'> {
+  type: 'CONNECTOR';
+}
+
+export interface StickySceneNode extends BaseSceneNode, Omit<StickyData, 'name'> {
+  type: 'STICKY';
+}
+
+export interface ShapeWithTextSceneNode extends BaseSceneNode, Omit<ShapeWithTextData, 'name'> {
+  type: 'SHAPE_WITH_TEXT';
+}
+
+export interface CodeBlockSceneNode extends BaseSceneNode, Omit<CodeBlockData, 'name'> {
+  type: 'CODE_BLOCK';
+}
+
+export interface TableSceneNode extends BaseSceneNode, Omit<TableData, 'name'> {
+  type: 'TABLE';
+  children?: SceneNode[]; // Table cells
+}
+
+export interface StampSceneNode extends BaseSceneNode, Omit<StampData, 'name'> {
+  type: 'STAMP';
+}
+
+export interface HighlightSceneNode extends BaseSceneNode, Omit<HighlightData, 'name'> {
+  type: 'HIGHLIGHT';
+}
+
+export interface WashiTapeSceneNode extends BaseSceneNode, Omit<WashiTapeData, 'name'> {
+  type: 'WASHI_TAPE';
+}
+
+// ============ Media/Embed Nodes ============
+
+export interface EmbedSceneNode extends BaseSceneNode, Omit<EmbedData, 'name'> {
+  type: 'EMBED';
+}
+
+export interface LinkUnfurlSceneNode extends BaseSceneNode, Omit<LinkUnfurlData, 'name'> {
+  type: 'LINK_UNFURL';
+}
+
+export interface MediaSceneNode extends BaseSceneNode, Omit<MediaData, 'name'> {
+  type: 'MEDIA';
+}
+
+// ============ Interactive/Widget Nodes ============
+
+export interface InteractiveSlideElementSceneNode extends BaseSceneNode, Omit<InteractiveSlideElementData, 'name'> {
+  type: 'INTERACTIVE_SLIDE_ELEMENT';
+}
+
+export interface WidgetSceneNode extends BaseSceneNode, Omit<WidgetData, 'name'> {
+  type: 'WIDGET';
+}
+
+// ============ SceneNode Union ============
+
+/** Discriminated union of all node types returned from queries */
+export type SceneNode =
+  // Container nodes
+  | FrameSceneNode
+  | ComponentSceneNode
+  | ComponentSetSceneNode
+  | GroupSceneNode
+  | SectionSceneNode
+  | BooleanOperationSceneNode
+  | TransformGroupSceneNode
+  // Slide nodes
+  | SlideSceneNode
+  | SlideRowSceneNode
+  | SlideGridSceneNode
+  // Shape nodes
+  | RectangleSceneNode
+  | EllipseSceneNode
+  | PolygonSceneNode
+  | StarSceneNode
+  | LineSceneNode
+  | VectorSceneNode
+  // Text nodes
+  | TextSceneNode
+  | TextPathSceneNode
+  // Other leaf nodes
+  | SliceSceneNode
+  | InstanceSceneNode
+  // FigJam nodes
+  | ConnectorSceneNode
+  | StickySceneNode
+  | ShapeWithTextSceneNode
+  | CodeBlockSceneNode
+  | TableSceneNode
+  | StampSceneNode
+  | HighlightSceneNode
+  | WashiTapeSceneNode
+  // Media/Embed nodes
+  | EmbedSceneNode
+  | LinkUnfurlSceneNode
+  | MediaSceneNode
+  // Interactive/Widget nodes
+  | InteractiveSlideElementSceneNode
+  | WidgetSceneNode;

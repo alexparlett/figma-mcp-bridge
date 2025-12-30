@@ -1,5 +1,6 @@
 import { EventEmitter } from "events";
-import type { Command, CommandResult, TaggedCommand } from "../types/types.js";
+import type { Command } from "../types/commands.js";
+import type { CommandResult, TaggedCommand } from "../types/messages.js";
 
 export type { TaggedCommand };
 
