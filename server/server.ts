@@ -7,11 +7,14 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import express, { Request, Response, NextFunction } from "express";
 import { WebSocketServer, WebSocket } from "ws";
-import type { Command, CommandResult, WebSocketMessage, ComponentDef } from "../types/types.js";
+import type { Command, CommandType, CommandResult, WebSocketMessage } from "../types/types.js";
+
+// Tagged command includes the internal _cmdId for tracking
+type TaggedCommand = Command & { _cmdId: string };
 
 // Store for pending commands and connected Figma clients
 let figmaClient: WebSocket | null = null;
-let pendingCommands: Command[] = [];
+let pendingCommands: TaggedCommand[] = [];
 let commandId = 0;
 const pendingResolvers = new Map<string, (result: CommandResult) => void>();
 
@@ -51,10 +54,10 @@ app.post("/results", (req: Request, res: Response) => {
   const { results } = req.body as { results?: CommandResult[] };
   if (results && Array.isArray(results)) {
     results.forEach(result => {
-      const resolver = pendingResolvers.get(result.id || '');
+      const resolver = pendingResolvers.get(result._cmdId || '');
       if (resolver) {
         resolver(result);
-        pendingResolvers.delete(result.id || '');
+        pendingResolvers.delete(result._cmdId || '');
       }
     });
   }
@@ -80,7 +83,7 @@ wss.on("connection", (ws: WebSocket) => {
       if (msg.type === "results" && msg.results) {
         console.error("[Figma MCP Bridge] Received results:", msg.results.length);
         msg.results.forEach(result => {
-          const cmdId = (result as { _cmdId?: string })._cmdId || result.id;
+          const cmdId = result._cmdId;
           const resolver = pendingResolvers.get(cmdId || '');
           if (resolver) {
             console.error("[Figma MCP Bridge] Resolving:", cmdId);
@@ -106,7 +109,7 @@ wss.on("connection", (ws: WebSocket) => {
 function sendToFigma(commands: Command[]): Promise<CommandResult[]> {
   return new Promise((resolve, reject) => {
     const id = ++commandId;
-    const taggedCommands = commands.map((cmd, i) => ({
+    const taggedCommands: TaggedCommand[] = commands.map((cmd, i) => ({
       ...cmd,
       _cmdId: `${id}-${i}`
     }));
@@ -740,14 +743,431 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             scale: { type: "number", description: "Scale multiplier for image export (default: 1)" }
           }
         }
+      },
+      // ========== NEW SHAPE TOOLS ==========
+      {
+        name: "figma_create_polygon",
+        description: "Create a polygon shape in Figma",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            id: { type: "string", description: "Unique ID to reference this polygon" },
+            name: { type: "string", description: "Name of the polygon" },
+            x: { type: "number" },
+            y: { type: "number" },
+            width: { type: "number", description: "Width in pixels" },
+            height: { type: "number", description: "Height in pixels" },
+            pointCount: { type: "number", description: "Number of sides (3 for triangle, 5 for pentagon, etc)" },
+            fillColor: { type: "string", description: "Fill color as hex" },
+            strokeColor: { type: "string", description: "Stroke color as hex" },
+            strokeWeight: { type: "number" },
+            cornerRadius: { type: "number" },
+            parent: { type: "string", description: "Parent frame ID" }
+          },
+          required: ["pointCount"]
+        }
+      },
+      {
+        name: "figma_create_star",
+        description: "Create a star shape in Figma",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            id: { type: "string", description: "Unique ID to reference this star" },
+            name: { type: "string", description: "Name of the star" },
+            x: { type: "number" },
+            y: { type: "number" },
+            width: { type: "number" },
+            height: { type: "number" },
+            pointCount: { type: "number", description: "Number of points on the star (default: 5)" },
+            innerRadius: { type: "number", description: "Inner radius ratio 0-1 (default: 0.5, smaller = pointier)" },
+            fillColor: { type: "string", description: "Fill color as hex" },
+            strokeColor: { type: "string", description: "Stroke color as hex" },
+            strokeWeight: { type: "number" },
+            parent: { type: "string" }
+          },
+          required: ["pointCount"]
+        }
+      },
+      {
+        name: "figma_create_vector",
+        description: "Create a vector shape from SVG path data",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            id: { type: "string" },
+            name: { type: "string" },
+            x: { type: "number" },
+            y: { type: "number" },
+            vectorPaths: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  windingRule: { type: "string", enum: ["NONZERO", "EVENODD"] },
+                  data: { type: "string", description: "SVG path data string (M, L, C, etc)" }
+                }
+              },
+              description: "Array of vector paths with SVG path data"
+            },
+            fillColor: { type: "string" },
+            strokeColor: { type: "string" },
+            strokeWeight: { type: "number" },
+            strokeCap: { type: "string", enum: ["NONE", "ROUND", "SQUARE", "LINE_ARROW", "TRIANGLE_ARROW"] },
+            strokeJoin: { type: "string", enum: ["MITER", "BEVEL", "ROUND"] },
+            parent: { type: "string" }
+          },
+          required: ["vectorPaths"]
+        }
+      },
+      {
+        name: "figma_create_from_svg",
+        description: "Create a node from SVG string content",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            id: { type: "string" },
+            name: { type: "string" },
+            svg: { type: "string", description: "Complete SVG string content" },
+            x: { type: "number" },
+            y: { type: "number" },
+            parent: { type: "string" }
+          },
+          required: ["svg"]
+        }
+      },
+      {
+        name: "figma_create_section",
+        description: "Create a section (organizational container) in Figma",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            id: { type: "string" },
+            name: { type: "string", description: "Section name" },
+            x: { type: "number" },
+            y: { type: "number" },
+            width: { type: "number" },
+            height: { type: "number" },
+            fillColor: { type: "string", description: "Background color" }
+          },
+          required: ["name"]
+        }
+      },
+      {
+        name: "figma_create_slice",
+        description: "Create a slice for export regions",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            id: { type: "string" },
+            name: { type: "string" },
+            x: { type: "number" },
+            y: { type: "number" },
+            width: { type: "number" },
+            height: { type: "number" },
+            exportSettings: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  format: { type: "string", enum: ["PNG", "JPG", "SVG", "PDF"] },
+                  suffix: { type: "string" },
+                  constraint: { type: "object" }
+                }
+              }
+            }
+          },
+          required: ["width", "height"]
+        }
+      },
+      // ========== BOOLEAN OPERATIONS ==========
+      {
+        name: "figma_boolean_union",
+        description: "Combine multiple shapes into one (union/add)",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            id: { type: "string", description: "ID for the resulting shape" },
+            name: { type: "string" },
+            nodeIds: {
+              type: "array",
+              items: { type: "string" },
+              description: "Array of node IDs or registry IDs to combine"
+            }
+          },
+          required: ["nodeIds"]
+        }
+      },
+      {
+        name: "figma_boolean_subtract",
+        description: "Subtract shapes from the first shape",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            id: { type: "string" },
+            name: { type: "string" },
+            nodeIds: {
+              type: "array",
+              items: { type: "string" },
+              description: "Array of node IDs - first shape minus others"
+            }
+          },
+          required: ["nodeIds"]
+        }
+      },
+      {
+        name: "figma_boolean_intersect",
+        description: "Keep only overlapping areas of shapes",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            id: { type: "string" },
+            name: { type: "string" },
+            nodeIds: {
+              type: "array",
+              items: { type: "string" }
+            }
+          },
+          required: ["nodeIds"]
+        }
+      },
+      {
+        name: "figma_boolean_exclude",
+        description: "Keep only non-overlapping areas of shapes",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            id: { type: "string" },
+            name: { type: "string" },
+            nodeIds: {
+              type: "array",
+              items: { type: "string" }
+            }
+          },
+          required: ["nodeIds"]
+        }
+      },
+      {
+        name: "figma_flatten_node",
+        description: "Flatten a node to a single vector path",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            id: { type: "string" },
+            nodeId: { type: "string", description: "Figma node ID to flatten" },
+            name: { type: "string", description: "Node name to find" }
+          }
+        }
+      },
+      // ========== GROUPING ==========
+      {
+        name: "figma_group_nodes",
+        description: "Group multiple nodes together",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            id: { type: "string" },
+            name: { type: "string", description: "Group name" },
+            nodeIds: {
+              type: "array",
+              items: { type: "string" },
+              description: "Array of node IDs to group"
+            }
+          },
+          required: ["nodeIds"]
+        }
+      },
+      {
+        name: "figma_ungroup_node",
+        description: "Ungroup a group node",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            nodeId: { type: "string", description: "Figma node ID of the group" },
+            id: { type: "string", description: "Registry ID of the group" },
+            name: { type: "string", description: "Group name to find" }
+          }
+        }
+      },
+      // ========== CONSTRAINTS & LAYOUT ==========
+      {
+        name: "figma_set_constraints",
+        description: "Set resize constraints on a node",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            nodeId: { type: "string" },
+            id: { type: "string" },
+            name: { type: "string" },
+            horizontal: { type: "string", enum: ["MIN", "CENTER", "MAX", "STRETCH", "SCALE"], description: "Horizontal constraint" },
+            vertical: { type: "string", enum: ["MIN", "CENTER", "MAX", "STRETCH", "SCALE"], description: "Vertical constraint" }
+          },
+          required: ["horizontal", "vertical"]
+        }
+      },
+      {
+        name: "figma_set_layout_grids",
+        description: "Set layout grids on a frame",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            nodeId: { type: "string" },
+            id: { type: "string" },
+            name: { type: "string" },
+            layoutGrids: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  pattern: { type: "string", enum: ["COLUMNS", "ROWS", "GRID"] },
+                  sectionSize: { type: "number" },
+                  visible: { type: "boolean" },
+                  color: { type: "string" },
+                  alignment: { type: "string", enum: ["MIN", "CENTER", "MAX", "STRETCH"] },
+                  gutterSize: { type: "number" },
+                  count: { type: "number" },
+                  offset: { type: "number" }
+                }
+              }
+            }
+          },
+          required: ["layoutGrids"]
+        }
+      },
+      // ========== EFFECTS ==========
+      {
+        name: "figma_set_effects",
+        description: "Set effects (shadows, blurs) on a node",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            nodeId: { type: "string" },
+            id: { type: "string" },
+            name: { type: "string" },
+            effects: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  type: { type: "string", enum: ["DROP_SHADOW", "INNER_SHADOW", "LAYER_BLUR", "BACKGROUND_BLUR"] },
+                  color: { type: "string", description: "Shadow color as hex (for shadows)" },
+                  opacity: { type: "number", description: "Effect opacity 0-1" },
+                  offset: { type: "object", properties: { x: { type: "number" }, y: { type: "number" } } },
+                  radius: { type: "number", description: "Blur radius" },
+                  spread: { type: "number", description: "Shadow spread" },
+                  visible: { type: "boolean" },
+                  showShadowBehindNode: { type: "boolean" }
+                }
+              },
+              description: "Array of effects to apply"
+            }
+          },
+          required: ["effects"]
+        }
+      },
+      {
+        name: "figma_set_blend_mode",
+        description: "Set blend mode on a node",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            nodeId: { type: "string" },
+            id: { type: "string" },
+            name: { type: "string" },
+            blendMode: {
+              type: "string",
+              enum: ["PASS_THROUGH", "NORMAL", "DARKEN", "MULTIPLY", "LINEAR_BURN", "COLOR_BURN", "LIGHTEN", "SCREEN", "LINEAR_DODGE", "COLOR_DODGE", "OVERLAY", "SOFT_LIGHT", "HARD_LIGHT", "DIFFERENCE", "EXCLUSION", "HUE", "SATURATION", "COLOR", "LUMINOSITY"],
+              description: "Blend mode to apply"
+            }
+          },
+          required: ["blendMode"]
+        }
+      },
+      // ========== VIEWPORT & SELECTION ==========
+      {
+        name: "figma_set_selection",
+        description: "Set the current selection in Figma",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            nodeIds: {
+              type: "array",
+              items: { type: "string" },
+              description: "Array of node IDs to select"
+            }
+          },
+          required: ["nodeIds"]
+        }
+      },
+      {
+        name: "figma_zoom_to_fit",
+        description: "Zoom viewport to fit specified nodes or selection",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            nodeIds: {
+              type: "array",
+              items: { type: "string" },
+              description: "Node IDs to fit in view (uses selection if not specified)"
+            }
+          }
+        }
+      },
+      {
+        name: "figma_get_viewport",
+        description: "Get current viewport position and zoom",
+        inputSchema: {
+          type: "object" as const,
+          properties: {}
+        }
+      },
+      {
+        name: "figma_set_viewport",
+        description: "Set viewport position and zoom",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            x: { type: "number", description: "X position" },
+            y: { type: "number", description: "Y position" },
+            zoom: { type: "number", description: "Zoom level (1 = 100%)" }
+          }
+        }
+      },
+      // ========== ADVANCED FILLS ==========
+      {
+        name: "figma_set_gradient_fill",
+        description: "Set a gradient fill on a node",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            nodeId: { type: "string" },
+            id: { type: "string" },
+            name: { type: "string" },
+            gradientType: { type: "string", enum: ["LINEAR", "RADIAL", "ANGULAR", "DIAMOND"], description: "Type of gradient" },
+            stops: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  position: { type: "number", description: "Position 0-1" },
+                  color: { type: "string", description: "Color as hex" },
+                  opacity: { type: "number" }
+                }
+              },
+              description: "Color stops for the gradient"
+            },
+            angle: { type: "number", description: "Rotation angle in degrees (for linear)" }
+          },
+          required: ["gradientType", "stops"]
+        }
       }
     ]
   };
 });
 
-// Process node for shorthand conversions
-function processNode(node: Record<string, unknown>): Record<string, unknown> {
-  const result = { ...node };
+// Process data for shorthand conversions (convenience transforms)
+function processData(data: Record<string, unknown>): Record<string, unknown> {
+  const result = { ...data };
 
   // fillColor -> fills
   if (result.fillColor) {
@@ -783,32 +1203,41 @@ function processNode(node: Record<string, unknown>): Record<string, unknown> {
     delete result.strokeAlign;
     delete result.dashPattern;
   }
-  // Process children recursively
-  if (result.children && Array.isArray(result.children)) {
-    result.children = result.children.map(processNode);
-  }
   return result;
 }
 
-// Find dependencies in a component tree
-function findDependencies(node: Record<string, unknown>, deps: Set<string> = new Set()): Set<string> {
-  if (node.type === 'CREATE_INSTANCE' && node.componentId) {
-    deps.add(node.componentId as string);
+// Process a command with nested children (for tree structures)
+function processCommand(cmd: Command): Command {
+  const processed = {
+    type: cmd.type,
+    id: cmd.id,
+    data: cmd.data ? processData(cmd.data as Record<string, unknown>) : undefined,
+    children: cmd.children ? cmd.children.map(processCommand) : undefined
+  } as Command;
+
+  return processed;
+}
+
+// Find dependencies in a component tree (looks for componentId in data)
+function findDependencies(cmd: Command, deps: Set<string> = new Set()): Set<string> {
+  if (cmd.type === 'CREATE_INSTANCE' && cmd.data?.componentId) {
+    deps.add(cmd.data.componentId as string);
   }
-  if (node.children && Array.isArray(node.children)) {
-    node.children.forEach((child: Record<string, unknown>) => findDependencies(child, deps));
+  if (cmd.children && Array.isArray(cmd.children)) {
+    cmd.children.forEach((child: Command) => findDependencies(child, deps));
   }
   return deps;
 }
 
 // Topological sort for dependency order
-function sortByDependencies(components: ComponentDef[]): ComponentDef[] {
-  const componentMap = new Map(components.map(c => [c.id, c]));
-  const sorted: ComponentDef[] = [];
+function sortByDependencies(components: Command[]): Command[] {
+  const componentMap = new Map(components.map(c => [c.id!, c]));
+  const sorted: Command[] = [];
   const visited = new Set<string>();
   const visiting = new Set<string>();
 
-  function visit(comp: ComponentDef) {
+  function visit(comp: Command) {
+    if (!comp.id) return;
     if (visited.has(comp.id)) return;
     if (visiting.has(comp.id)) {
       console.error(`Circular dependency detected involving: ${comp.id}`);
@@ -863,16 +1292,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     if (name === "figma_create_tree") {
-      const typedArgs = args as { tree: Record<string, unknown> };
-      const processedTree = processNode({ ...typedArgs.tree });
-      const results = await sendToFigma([processedTree as Command]);
+      const typedArgs = args as { tree: Command };
+      const processedTree = processCommand(typedArgs.tree);
+      const results = await sendToFigma([processedTree]);
       const result = results[0];
 
       if (result && result.success) {
+        const treeData = typedArgs.tree.data as Record<string, unknown> | undefined;
         return {
           content: [{
             type: "text",
-            text: `✔ Created component tree "${processedTree.name || processedTree.type}" (root node: ${result.nodeId})`
+            text: `✔ Created component tree "${treeData?.name || typedArgs.tree.type}" (root node: ${result.nodeId})`
           }]
         };
       } else {
@@ -881,23 +1311,29 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     if (name === "figma_define_components") {
-      const typedArgs = args as { components: ComponentDef[] };
+      // Components are Command[] with type and data
+      const typedArgs = args as { components: Command[] };
 
-      // Sort components by dependencies
+      // Sort components by dependencies (look in data for componentId references)
       const sortedComponents = sortByDependencies(typedArgs.components);
 
       // Convert each component definition to CREATE_COMPONENT command
       const commands = sortedComponents.map((comp, index) => {
-        const processed = processNode({ ...comp });
+        const compData = (comp.data || {}) as Record<string, unknown>;
+        const data = processData(compData);
         return {
           type: "CREATE_COMPONENT",
-          ...processed,
-          x: processed.x ?? (index * 400),
-          y: processed.y ?? 0
+          id: comp.id,
+          data: {
+            ...data,
+            x: data.x ?? (index * 400),
+            y: data.y ?? 0
+          },
+          children: comp.children
         } as Command;
       });
 
-      const results = await sendToFigma(commands);
+      const results = await sendToFigma(commands.map(processCommand));
       const successful = results.filter(r => r.success).length;
       const componentIds = results.map((r, i) => `${sortedComponents[i].id}: ${r.nodeId}`).join(', ');
 
@@ -924,30 +1360,32 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         paddingRight?: number;
         paddingBottom?: number;
         paddingLeft?: number;
-        children?: Record<string, unknown>[];
+        children?: Command[];
       };
 
       // Build the screen as a frame with children
-      const screen = processNode({
+      const screen: Command = {
         type: "CREATE_FRAME",
-        name: typedArgs.name,
-        x: typedArgs.x ?? 0,
-        y: typedArgs.y ?? 0,
-        width: typedArgs.width,
-        height: typedArgs.height,
-        fills: typedArgs.fill ? [{ color: typedArgs.fill }] : undefined,
-        direction: typedArgs.direction,
-        gap: typedArgs.gap,
-        padding: typedArgs.padding,
-        paddingTop: typedArgs.paddingTop,
-        paddingRight: typedArgs.paddingRight,
-        paddingBottom: typedArgs.paddingBottom,
-        paddingLeft: typedArgs.paddingLeft,
-        clipsContent: true,
+        data: {
+          name: typedArgs.name,
+          x: typedArgs.x ?? 0,
+          y: typedArgs.y ?? 0,
+          width: typedArgs.width,
+          height: typedArgs.height,
+          fills: typedArgs.fill ? [{ color: typedArgs.fill }] : undefined,
+          direction: typedArgs.direction as 'HORIZONTAL' | 'VERTICAL' | undefined,
+          gap: typedArgs.gap,
+          padding: typedArgs.padding,
+          paddingTop: typedArgs.paddingTop,
+          paddingRight: typedArgs.paddingRight,
+          paddingBottom: typedArgs.paddingBottom,
+          paddingLeft: typedArgs.paddingLeft,
+          clipsContent: true
+        },
         children: typedArgs.children
-      });
+      };
 
-      const results = await sendToFigma([screen as Command]);
+      const results = await sendToFigma([processCommand(screen)]);
       const result = results[0];
 
       if (result && result.success) {
@@ -964,20 +1402,49 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     // Map tool names to command types
     const toolToCommand: Record<string, string> = {
+      // Creation
       "figma_create_frame": "CREATE_FRAME",
       "figma_create_rectangle": "CREATE_RECTANGLE",
       "figma_create_ellipse": "CREATE_ELLIPSE",
+      "figma_create_polygon": "CREATE_POLYGON",
+      "figma_create_star": "CREATE_STAR",
+      "figma_create_line": "CREATE_LINE",
+      "figma_create_vector": "CREATE_VECTOR",
+      "figma_create_from_svg": "CREATE_FROM_SVG",
       "figma_create_text": "CREATE_TEXT",
       "figma_create_component": "CREATE_COMPONENT",
       "figma_create_instance": "CREATE_INSTANCE",
-      "figma_create_line": "CREATE_LINE",
+      "figma_create_section": "CREATE_SECTION",
+      "figma_create_slice": "CREATE_SLICE",
+      // Styles & Variables
       "figma_create_variable_collection": "CREATE_VARIABLE_COLLECTION",
       "figma_create_variable": "CREATE_VARIABLE",
       "figma_create_text_style": "CREATE_STYLE",
       "figma_create_color_style": "CREATE_STYLE",
+      // Boolean operations
+      "figma_boolean_union": "BOOLEAN_UNION",
+      "figma_boolean_subtract": "BOOLEAN_SUBTRACT",
+      "figma_boolean_intersect": "BOOLEAN_INTERSECT",
+      "figma_boolean_exclude": "BOOLEAN_EXCLUDE",
+      "figma_flatten_node": "FLATTEN_NODE",
+      // Grouping
+      "figma_group_nodes": "GROUP_NODES",
+      "figma_ungroup_node": "UNGROUP_NODE",
+      // Modification
       "figma_move_node": "MOVE_NODE",
       "figma_update_node": "UPDATE_NODE",
       "figma_delete_node": "DELETE_NODE",
+      "figma_set_constraints": "SET_CONSTRAINTS",
+      "figma_set_layout_grids": "SET_LAYOUT_GRIDS",
+      "figma_set_effects": "SET_EFFECTS",
+      "figma_set_blend_mode": "SET_BLEND_MODE",
+      "figma_set_gradient_fill": "SET_GRADIENT_FILL",
+      // Viewport & Selection
+      "figma_set_selection": "SET_SELECTION",
+      "figma_zoom_to_fit": "ZOOM_TO_FIT",
+      "figma_get_viewport": "GET_VIEWPORT",
+      "figma_set_viewport": "SET_VIEWPORT",
+      // Queries
       "figma_get_node_by_name": "GET_NODE_BY_NAME",
       "figma_get_selection": "GET_SELECTION",
       "figma_get_page_nodes": "GET_PAGE_NODES",
@@ -986,6 +1453,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       "figma_get_styles": "GET_STYLES",
       "figma_get_components": "GET_COMPONENTS",
       "figma_get_variables": "GET_VARIABLES",
+      // Export
       "figma_export_node": "EXPORT_NODE"
     };
 
@@ -994,43 +1462,32 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       throw new Error(`Unknown tool: ${name}`);
     }
 
-    // Build command
-    const command: Command = { type: commandType, ...(args as Record<string, unknown>) };
+    // Extract id and children if present, rest goes to data
+    const { id, children, ...rest } = args as Record<string, unknown>;
 
-    // Handle special cases
+    // Process the data for convenience transforms
+    const data = processData(rest);
+
+    // Handle special cases - add to data
     if (name === "figma_create_text_style") {
-      command.styleType = "TEXT";
+      data.styleType = "TEXT";
     } else if (name === "figma_create_color_style") {
-      command.styleType = "PAINT";
+      data.styleType = "PAINT";
     }
 
-    // Convert fillColor to fills array
-    if ((args as Record<string, unknown>).fillColor) {
-      command.fills = [{ color: (args as Record<string, unknown>).fillColor as string }];
-      delete command.fillColor;
-    }
+    // Build command with new structure (cast type since we validate it exists in toolToCommand)
+    const command = {
+      type: commandType as CommandType,
+      id: id as string | undefined,
+      data,
+      children: children as Command[] | undefined
+    } as Command;
 
-    // Convert fill to fills for text
-    if (name === "figma_create_text" && (args as Record<string, unknown>).fillColor) {
-      command.fill = (args as Record<string, unknown>).fillColor as string;
-      delete command.fillColor;
-    }
-
-    // Convert stroke shorthand
-    if ((args as Record<string, unknown>).strokeColor) {
-      command.stroke = {
-        color: (args as Record<string, unknown>).strokeColor as string,
-        weight: ((args as Record<string, unknown>).strokeWeight as number) || 1
-      };
-      delete command.strokeColor;
-      delete command.strokeWeight;
-    }
-
-    const results = await sendToFigma([command]);
+    const results = await sendToFigma([processCommand(command)]);
     const result = results[0];
 
     // Fetch commands return data directly
-    const fetchCommands = ["GET_SELECTION", "GET_PAGE_NODES", "GET_NODE_BY_ID", "FIND_NODES", "GET_STYLES", "GET_COMPONENTS", "GET_VARIABLES", "EXPORT_NODE"];
+    const fetchCommands = ["GET_SELECTION", "GET_PAGE_NODES", "GET_NODE_BY_ID", "FIND_NODES", "GET_STYLES", "GET_COMPONENTS", "GET_VARIABLES", "EXPORT_NODE", "GET_VIEWPORT"];
 
     if (fetchCommands.includes(commandType)) {
       if (result && result.success) {
@@ -1050,7 +1507,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return {
         content: [{
           type: "text",
-          text: `Done: ${command.name || commandType} (node: ${result.nodeId})`
+          text: `Done: ${(data.name as string) || commandType} (node: ${result.nodeId})`
         }]
       };
     } else {
