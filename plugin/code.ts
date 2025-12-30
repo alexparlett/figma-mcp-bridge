@@ -14,7 +14,7 @@ import type {
 } from "../types/commands.js"
 
 // Registry is used by handlers - imported here for type awareness
-import "./registry.js";
+import { initializeRegistries } from "./registry.js";
 
 // Import all handlers
 import {
@@ -95,6 +95,9 @@ import {
 
 // Start collapsed (compact bar)
 figma.showUI(__html__, { width: 240, height: 28 });
+
+// Initialize registries with existing document content
+initializeRegistries();
 
 // Process commands from UI
 figma.ui.onmessage = async (msg: UIMessage) => {
