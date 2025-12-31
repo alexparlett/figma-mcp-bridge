@@ -258,6 +258,11 @@
         if (window._pendingCallback) { window._pendingCallback(msg.results); window._pendingCallback = null; }
       } else if (msg.type === 'error') {
         log('Error: ' + msg.message, 'error');
+        // Send error result back so server doesn't timeout waiting
+        if (window._pendingCallback) {
+          window._pendingCallback([{ success: false, error: msg.message }]);
+          window._pendingCallback = null;
+        }
       } else if (msg.type === 'url-loaded') {
         bridgeUrlInput.value = msg.url || 'ws://localhost:3456';
         setTimeout(connect, 100);
