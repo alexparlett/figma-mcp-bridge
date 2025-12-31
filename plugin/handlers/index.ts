@@ -34,7 +34,7 @@ export {
   updateNode,
   deleteNode
 } from './modifiers.js';
-export { getNodeByName, getSelection, getPageNodes, getNodeById, findNodes, getStyles, getComponents, getVariables } from './queries.js';
+export { getNodeByName, getSelection, getPageNodes, getNodeById, findNodes, getStyles, getComponents, getVariables, serializeNode } from './queries.js';
 export { createTextStyle, createColorStyle, createEffectStyle, createVariableCollection, createVariable } from './styles.js';
 export { exportNode } from './export.js';
 export {

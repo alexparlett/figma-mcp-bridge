@@ -20,7 +20,7 @@ import {
 
 // ============ CREATE TEXT ============
 
-export async function createText(cmd: Command, parentNode?: SceneNode): Promise<TextNode> {
+export async function createText(cmd: Command): Promise<TextNode> {
   const d = (cmd.data || {}) as TextData;
   const text = figma.createText();
 
@@ -129,7 +129,7 @@ export async function createText(cmd: Command, parentNode?: SceneNode): Promise<
   }
 
   // Parent
-  const parent = getParent(d, parentNode);
+  const parent = getParent(d);
   if (parent) parent.appendChild(text);
 
   registerNode(cmd, text);

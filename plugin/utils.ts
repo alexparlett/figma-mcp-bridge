@@ -352,11 +352,7 @@ export function resolveNodes(ids: string[]): SceneNode[] {
 
 // ============ Parent Node Helper ============
 
-export function getParent(data: BaseNodeData, _parentNode?: SceneNode): (BaseNode & ChildrenMixin) | null {
-  if (_parentNode && 'appendChild' in _parentNode) {
-    return _parentNode as BaseNode & ChildrenMixin;
-  }
-
+export function getParent(data: BaseNodeData): (BaseNode & ChildrenMixin) | null {
   if (data.parent) {
     const parent = nodeRegistry.get(data.parent);
     if (parent && 'appendChild' in parent) {

@@ -25,15 +25,21 @@ export type CommandHandler = (
 
 /** Format a successful creation result */
 export function formatCreationResult(
-  name: string | undefined,
+  result: CommandResult,
   commandType: CommandType,
-  nodeId: string | undefined
+  name?: string
 ): ToolCallResult {
+  const { success, _cmdId, ...responseData } = result;
   return {
     content: [
       {
         type: "text",
-        text: `Done: ${name || commandType} (node: ${nodeId})`,
+        text: JSON.stringify({
+          success: true,
+          command: commandType,
+          name: name || null,
+          ...responseData,
+        }),
       },
     ],
   };
@@ -59,7 +65,10 @@ export function formatError(error: Error | string): ToolCallResult {
     content: [
       {
         type: "text",
-        text: `Error: ${message}`,
+        text: JSON.stringify({
+          success: false,
+          error: message,
+        }),
       },
     ],
     isError: true,

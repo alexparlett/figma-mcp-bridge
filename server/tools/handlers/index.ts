@@ -219,9 +219,9 @@ export async function handleToolCall(
     if (result && result.success) {
       const data = (command.data || {}) as Record<string, unknown>;
       return formatCreationResult(
-        data.name as string | undefined,
+        result,
         toolSchema.commandType,
-        result.nodeId
+        data.name as string | undefined
       );
     } else {
       throw new Error(result?.error || "Unknown error");

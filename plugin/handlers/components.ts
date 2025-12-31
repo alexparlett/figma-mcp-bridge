@@ -20,7 +20,7 @@ import {
 
 // ============ CREATE COMPONENT ============
 
-export async function createComponent(cmd: Command, parentNode?: SceneNode): Promise<ComponentNode> {
+export async function createComponent(cmd: Command): Promise<ComponentNode> {
   const d = (cmd.data || {}) as ComponentData;
   const component = figma.createComponent();
 
@@ -81,7 +81,7 @@ export async function createComponent(cmd: Command, parentNode?: SceneNode): Pro
   if (d.documentationLinks) component.documentationLinks = d.documentationLinks;
 
   // Parent
-  const parent = getParent(d, parentNode);
+  const parent = getParent(d);
   if (parent) parent.appendChild(component);
 
   registerNode(cmd, component);
@@ -90,7 +90,7 @@ export async function createComponent(cmd: Command, parentNode?: SceneNode): Pro
 
 // ============ CREATE INSTANCE ============
 
-export async function createInstance(cmd: Command, parentNode?: SceneNode): Promise<InstanceNode> {
+export async function createInstance(cmd: Command): Promise<InstanceNode> {
   const d = (cmd.data || {}) as InstanceData;
 
   // Find the component
@@ -174,7 +174,7 @@ export async function createInstance(cmd: Command, parentNode?: SceneNode): Prom
   if (d.rotation !== undefined) instance.rotation = d.rotation;
 
   // Parent
-  const parent = getParent(d, parentNode);
+  const parent = getParent(d);
   if (parent) parent.appendChild(instance);
 
   registerNode(cmd, instance);

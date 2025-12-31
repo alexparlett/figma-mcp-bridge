@@ -30,7 +30,7 @@ import {
 
 // ============ FRAME ============
 
-export async function createFrame(cmd: Command, parentNode?: SceneNode): Promise<FrameNode> {
+export async function createFrame(cmd: Command): Promise<FrameNode> {
   const d = (cmd.data || {}) as FrameData;
   const frame = figma.createFrame();
 
@@ -104,7 +104,7 @@ export async function createFrame(cmd: Command, parentNode?: SceneNode): Promise
   }
 
   // Parent
-  const parent = getParent(d, parentNode);
+  const parent = getParent(d);
   if (parent) parent.appendChild(frame);
 
   registerNode(cmd, frame);
@@ -113,7 +113,7 @@ export async function createFrame(cmd: Command, parentNode?: SceneNode): Promise
 
 // ============ RECTANGLE ============
 
-export async function createRectangle(cmd: Command, parentNode?: SceneNode): Promise<RectangleNode> {
+export async function createRectangle(cmd: Command): Promise<RectangleNode> {
   const d = (cmd.data || {}) as RectangleData;
   const rect = figma.createRectangle();
 
@@ -148,7 +148,7 @@ export async function createRectangle(cmd: Command, parentNode?: SceneNode): Pro
   }
 
   // Parent
-  const parent = getParent(d, parentNode);
+  const parent = getParent(d);
   if (parent) parent.appendChild(rect);
 
   registerNode(cmd, rect);
@@ -157,7 +157,7 @@ export async function createRectangle(cmd: Command, parentNode?: SceneNode): Pro
 
 // ============ ELLIPSE ============
 
-export async function createEllipse(cmd: Command, parentNode?: SceneNode): Promise<EllipseNode> {
+export async function createEllipse(cmd: Command): Promise<EllipseNode> {
   const d = (cmd.data || {}) as EllipseData;
   const ellipse = figma.createEllipse();
 
@@ -193,7 +193,7 @@ export async function createEllipse(cmd: Command, parentNode?: SceneNode): Promi
   }
 
   // Parent
-  const parent = getParent(d, parentNode);
+  const parent = getParent(d);
   if (parent) parent.appendChild(ellipse);
 
   registerNode(cmd, ellipse);
@@ -202,7 +202,7 @@ export async function createEllipse(cmd: Command, parentNode?: SceneNode): Promi
 
 // ============ POLYGON ============
 
-export async function createPolygon(cmd: Command, parentNode?: SceneNode): Promise<PolygonNode> {
+export async function createPolygon(cmd: Command): Promise<PolygonNode> {
   const d = (cmd.data || {}) as PolygonData;
   const polygon = figma.createPolygon();
 
@@ -236,7 +236,7 @@ export async function createPolygon(cmd: Command, parentNode?: SceneNode): Promi
   }
 
   // Parent
-  const parent = getParent(d, parentNode);
+  const parent = getParent(d);
   if (parent) parent.appendChild(polygon);
 
   registerNode(cmd, polygon);
@@ -245,7 +245,7 @@ export async function createPolygon(cmd: Command, parentNode?: SceneNode): Promi
 
 // ============ STAR ============
 
-export async function createStar(cmd: Command, parentNode?: SceneNode): Promise<StarNode> {
+export async function createStar(cmd: Command): Promise<StarNode> {
   const d = (cmd.data || {}) as StarData;
   const star = figma.createStar();
 
@@ -280,7 +280,7 @@ export async function createStar(cmd: Command, parentNode?: SceneNode): Promise<
   }
 
   // Parent
-  const parent = getParent(d, parentNode);
+  const parent = getParent(d);
   if (parent) parent.appendChild(star);
 
   registerNode(cmd, star);
@@ -289,7 +289,7 @@ export async function createStar(cmd: Command, parentNode?: SceneNode): Promise<
 
 // ============ LINE ============
 
-export async function createLine(cmd: Command, parentNode?: SceneNode): Promise<LineNode> {
+export async function createLine(cmd: Command): Promise<LineNode> {
   const d = (cmd.data || {}) as LineData;
   const line = figma.createLine();
 
@@ -331,7 +331,7 @@ export async function createLine(cmd: Command, parentNode?: SceneNode): Promise<
   }
 
   // Parent
-  const parent = getParent(d, parentNode);
+  const parent = getParent(d);
   if (parent) parent.appendChild(line);
 
   registerNode(cmd, line);
@@ -340,7 +340,7 @@ export async function createLine(cmd: Command, parentNode?: SceneNode): Promise<
 
 // ============ VECTOR ============
 
-export async function createVector(cmd: Command, parentNode?: SceneNode): Promise<VectorNode> {
+export async function createVector(cmd: Command): Promise<VectorNode> {
   const d = (cmd.data || {}) as VectorData;
   const vector = figma.createVector();
 
@@ -401,7 +401,7 @@ export async function createVector(cmd: Command, parentNode?: SceneNode): Promis
   }
 
   // Parent
-  const parent = getParent(d, parentNode);
+  const parent = getParent(d);
   if (parent) parent.appendChild(vector);
 
   registerNode(cmd, vector);
@@ -462,7 +462,7 @@ export async function createSection(cmd: Command): Promise<SectionNode> {
 
 // ============ SLICE ============
 
-export async function createSlice(cmd: Command, parentNode?: SceneNode): Promise<SliceNode> {
+export async function createSlice(cmd: Command): Promise<SliceNode> {
   const d = (cmd.data || {}) as SliceData;
   const slice = figma.createSlice();
 
@@ -485,7 +485,7 @@ export async function createSlice(cmd: Command, parentNode?: SceneNode): Promise
   if (d.locked !== undefined) slice.locked = d.locked;
 
   // Parent
-  const parent = getParent(d, parentNode);
+  const parent = getParent(d);
   if (parent) parent.appendChild(slice);
 
   registerNode(cmd, slice);
@@ -494,7 +494,7 @@ export async function createSlice(cmd: Command, parentNode?: SceneNode): Promise
 
 // ============ SVG IMPORT ============
 
-export async function createFromSvg(cmd: Command, parentNode?: SceneNode): Promise<FrameNode> {
+export async function createFromSvg(cmd: Command): Promise<FrameNode> {
   const d = (cmd.data || {}) as SvgImportData;
 
   if (!d.svg) {
@@ -511,7 +511,7 @@ export async function createFromSvg(cmd: Command, parentNode?: SceneNode): Promi
   if (d.locked !== undefined) svgNode.locked = d.locked;
 
   // Parent
-  const parent = getParent(d, parentNode);
+  const parent = getParent(d);
   if (parent) parent.appendChild(svgNode);
 
   registerNode(cmd, svgNode);

@@ -83,6 +83,7 @@ import {
   getStyles,
   getComponents,
   getVariables,
+  serializeNode,
   // Styles
   createTextStyle,
   createColorStyle,
@@ -139,15 +140,25 @@ function executeCommands(commands: Command[]): Promise<CommandResult[]> {
       }
 
       const cmd = commands[index];
-      executeCommand(cmd, undefined).then((result) => {
+      executeCommand(cmd).then((result) => {
         // Check if result is already a CommandResult (from GET operations)
         if (result && typeof result === 'object' && 'success' in result) {
           // Merge with command identifiers
           results.push({ ...result as CommandResult, id: cmd.id, _cmdId: cmd._cmdId });
+        } else if (result && 'id' in result) {
+          // Result is a node - serialize it
+          const node = result as BaseNode;
+          const serialized = serializeNode(node, 0, { compact: true, excludeVerbose: true });
+          results.push({
+            success: true,
+            id: cmd.id,
+            _cmdId: cmd._cmdId,
+            nodeId: node.id,
+            node: serialized ?? undefined
+          });
         } else {
-          // Result is a node - extract the nodeId
-          const nodeId = (result && 'id' in result) ? (result as BaseNode).id : null;
-          results.push({ success: true, id: cmd.id, _cmdId: cmd._cmdId, nodeId: nodeId || undefined });
+          // Null or other result
+          results.push({ success: true, id: cmd.id, _cmdId: cmd._cmdId });
         }
         index++;
         processNext();
@@ -162,56 +173,32 @@ function executeCommands(commands: Command[]): Promise<CommandResult[]> {
   });
 }
 
-// Process nested children recursively
-function processChildren(parentNode: SceneNode & ChildrenMixin, children: Command[]): Promise<void> {
-  if (!children || !Array.isArray(children) || children.length === 0) {
-    return Promise.resolve();
-  }
-
-  let index = 0;
-
-  function processNextChild(): Promise<void> {
-    if (index >= children.length) {
-      return Promise.resolve();
-    }
-
-    const childCmd = children[index];
-
-    return executeCommand(childCmd, parentNode).then(() => {
-      index++;
-      return processNextChild();
-    });
-  }
-
-  return processNextChild();
-}
-
-function executeCommand(cmd: Command, parentNode?: SceneNode): Promise<BaseNode | CommandResult | BaseStyle | VariableCollection | Variable | SceneNode[] | null> {
+function executeCommand(cmd: Command): Promise<BaseNode | CommandResult | BaseStyle | VariableCollection | Variable | SceneNode[] | null> {
   const nodeCreators: Record<CommandType, () => Promise<BaseNode | CommandResult | BaseStyle | VariableCollection | Variable | SceneNode[] | null>> = {
     // Page creation
     'CREATE_PAGE': () => Promise.resolve(createPage(cmd)),
     'CREATE_PAGE_DIVIDER': () => Promise.resolve(createPageDivider(cmd)),
 
     // Shape creation
-    'CREATE_FRAME': () => Promise.resolve(createFrame(cmd, parentNode)),
-    'CREATE_RECTANGLE': () => Promise.resolve(createRectangle(cmd, parentNode)),
-    'CREATE_ELLIPSE': () => Promise.resolve(createEllipse(cmd, parentNode)),
-    'CREATE_LINE': () => Promise.resolve(createLine(cmd, parentNode)),
-    'CREATE_POLYGON': () => createPolygon(cmd, parentNode),
-    'CREATE_STAR': () => createStar(cmd, parentNode),
-    'CREATE_VECTOR': () => createVector(cmd, parentNode),
+    'CREATE_FRAME': () => Promise.resolve(createFrame(cmd)),
+    'CREATE_RECTANGLE': () => Promise.resolve(createRectangle(cmd)),
+    'CREATE_ELLIPSE': () => Promise.resolve(createEllipse(cmd)),
+    'CREATE_LINE': () => Promise.resolve(createLine(cmd)),
+    'CREATE_POLYGON': () => createPolygon(cmd),
+    'CREATE_STAR': () => createStar(cmd),
+    'CREATE_VECTOR': () => createVector(cmd),
     'CREATE_SECTION': () => createSection(cmd),
-    'CREATE_SLICE': () => Promise.resolve(createSlice(cmd, parentNode)),
-    'CREATE_FROM_SVG': () => Promise.resolve(createFromSvg(cmd, parentNode)),
+    'CREATE_SLICE': () => Promise.resolve(createSlice(cmd)),
+    'CREATE_FROM_SVG': () => Promise.resolve(createFromSvg(cmd)),
 
     // Text creation
-    'CREATE_TEXT': () => createText(cmd, parentNode),
+    'CREATE_TEXT': () => createText(cmd),
     'SET_TEXT_RANGE_STYLE': () => setTextRangeStyle(cmd),
     'LIST_FONTS': () => listFonts(),
 
     // Component creation
-    'CREATE_COMPONENT': () => Promise.resolve(createComponent(cmd, parentNode)),
-    'CREATE_INSTANCE': () => createInstance(cmd, parentNode),
+    'CREATE_COMPONENT': () => Promise.resolve(createComponent(cmd)),
+    'CREATE_INSTANCE': () => createInstance(cmd),
 
     // Modifier operations
     'SET_FILLS': () => Promise.resolve(setFills(cmd)),
@@ -279,11 +266,5 @@ function executeCommand(cmd: Command, parentNode?: SceneNode): Promise<BaseNode 
     return Promise.reject(new Error('Unknown command type: ' + cmd.type));
   }
 
-  // Create the node, then process any nested children
-  return creator().then((createdNode) => {
-    if (cmd.children && Array.isArray(cmd.children) && cmd.children.length > 0 && createdNode && 'children' in createdNode) {
-      return processChildren(createdNode as SceneNode & ChildrenMixin, cmd.children).then(() => createdNode);
-    }
-    return createdNode;
-  });
+  return creator();
 }
