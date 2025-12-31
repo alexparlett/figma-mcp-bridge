@@ -469,7 +469,7 @@ export const toolMetadata: ToolMetadata[] = [
   // ============ Export ============
   {
     name: 'figma_export_node',
-    description: 'Export a node to an image format or JSON. PNG/JPG/SVG return base64-encoded data. JSON returns the node\'s serialized properties.',
+    description: 'Export a node as an image to visually verify your design work. Use PNG format to see exactly what was created and iterate on the design. Essential for validating layouts, colors, typography, and overall composition. Also supports JPG, SVG, PDF formats, and JSON for serialized node properties.',
     commandType: 'EXPORT_NODE',
     dataType: 'ExportNodeData',
     isFetchCommand: true,

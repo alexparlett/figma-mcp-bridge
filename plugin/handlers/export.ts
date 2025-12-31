@@ -43,18 +43,20 @@ export async function exportNode(cmd: Command): Promise<CommandResult> {
     };
   }
 
-  const exportNode = node as ExportMixin;
+  const exportable = node as ExportMixin;
+  if (typeof exportable.exportAsync !== 'function') {
+    throw new Error('Node does not support export');
+  }
+
   const settings: ExportSettings = {
     format: format as 'PNG' | 'JPG' | 'SVG' | 'PDF',
     constraint: { type: 'SCALE', value: scale }
   };
 
-  const bytes = await exportNode.exportAsync(settings);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  const base64 = btoa(binary);
+  const bytes = await exportable.exportAsync(settings);
+
+  // Convert to base64 using figma.base64Encode
+  const base64 = figma.base64Encode(bytes);
 
   const sceneNode = node as SceneNode;
   return {
