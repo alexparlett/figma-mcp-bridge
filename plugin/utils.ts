@@ -244,8 +244,9 @@ export async function applyFills(
     }
   }
 
-  if (data.fills && data.fills.length > 0) {
-    node.fills = convertPaintInputs(data.fills);
+  if (data.fills !== undefined) {
+    // Explicitly handle empty array to clear fills (transparent)
+    node.fills = data.fills.length > 0 ? convertPaintInputs(data.fills) : [];
     return;
   }
 
