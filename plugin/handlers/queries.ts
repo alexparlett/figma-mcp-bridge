@@ -133,9 +133,26 @@ export function serializeNode(
 
 // ============ GET NODE BY NAME ============
 export function getNodeByName(cmd: Command): CommandResult {
-  const d = (cmd.data || {}) as NodeRefData & QueryData;
+  const d = (cmd.data || {}) as NodeRefData;
   const name = d.name;
-  const node = figma.currentPage.findOne(n => n.name === name);
+  const allPages = d.allPages ?? false;
+
+  let node: SceneNode | null = null;
+  let foundOnPage: string | undefined;
+
+  if (allPages) {
+    // Search across all pages
+    for (const page of figma.root.children) {
+      node = page.findOne(n => n.name === name);
+      if (node) {
+        foundOnPage = page.name;
+        break;
+      }
+    }
+  } else {
+    // Search current page only
+    node = figma.currentPage.findOne(n => n.name === name);
+  }
 
   if (!node) {
     throw new Error('Node not found with name: ' + name);
@@ -148,7 +165,11 @@ export function getNodeByName(cmd: Command): CommandResult {
   }
 
   const opts = getSerializeOptions(d);
-  return { success: true, node: serializeNode(node, 0, opts) ?? undefined };
+  const result: CommandResult = { success: true, node: serializeNode(node, 0, opts) ?? undefined };
+  if (foundOnPage) {
+    result.data = { page: foundOnPage };
+  }
+  return result;
 }
 
 // ============ GET SELECTION ============
@@ -193,7 +214,7 @@ export function getPageNodes(cmd: Command): CommandResult {
 
 // ============ GET NODE BY ID ============
 export function getNodeById(cmd: Command): CommandResult {
-  const d = (cmd.data || {}) as NodeRefData & QueryData;
+  const d = (cmd.data || {}) as NodeRefData;
   const nodeId = d.nodeId;
   const node = figma.getNodeById(nodeId!);
 
@@ -213,14 +234,15 @@ export function getNodeById(cmd: Command): CommandResult {
 // ============ FIND NODES ============
 export function findNodes(cmd: Command): CommandResult {
   const d = (cmd.data || {}) as FindNodesData;
-  const results: SerializedSceneNode[] = [];
+  const results: Array<SerializedSceneNode & { page?: string }> = [];
   const maxResults = defaultVal(d.maxResults, 50);
   const opts = getSerializeOptions(d);
   const searchName = d.name;
   const filter = d.filter;
   const register = d.register;
+  const allPages = d.allPages ?? false;
 
-  function searchNode(node: BaseNode) {
+  function searchNode(node: BaseNode, pageName?: string) {
     if (results.length >= maxResults) return;
 
     let matches = true;
@@ -236,7 +258,10 @@ export function findNodes(cmd: Command): CommandResult {
     if (matches) {
       const serialized = serializeNode(node, 0, opts);
       if (serialized) {
-        results.push(serialized);
+        if (pageName) {
+          (serialized as SerializedSceneNode & { page?: string }).page = pageName;
+        }
+        results.push(serialized as SerializedSceneNode & { page?: string });
       }
 
       if (register) {
@@ -245,11 +270,20 @@ export function findNodes(cmd: Command): CommandResult {
     }
 
     if ('children' in node) {
-      (node as ChildrenMixin).children.forEach(searchNode);
+      (node as ChildrenMixin).children.forEach(child => searchNode(child, pageName));
     }
   }
 
-  figma.currentPage.children.forEach(searchNode);
+  if (allPages) {
+    // Search across all pages
+    for (const page of figma.root.children) {
+      if (results.length >= maxResults) break;
+      page.children.forEach(child => searchNode(child, page.name));
+    }
+  } else {
+    // Search current page only
+    figma.currentPage.children.forEach(child => searchNode(child));
+  }
 
   return {
     success: true,
@@ -304,23 +338,35 @@ export function getStyles(cmd: Command): CommandResult {
 // ============ GET COMPONENTS ============
 export function getComponents(cmd: Command): CommandResult {
   const d = (cmd.data || {}) as QueryData;
-  const components: SerializedSceneNode[] = [];
+  const components: Array<SerializedSceneNode & { page?: string }> = [];
   const opts = getSerializeOptions(d);
+  const allPages = d.allPages ?? false;
 
-  function findComponentsInNode(node: BaseNode) {
+  function findComponentsInNode(node: BaseNode, pageName?: string) {
     if (node.type === 'COMPONENT') {
       const serialized = serializeNode(node, 0, opts);
       if (serialized) {
-        components.push(serialized);
+        if (pageName) {
+          (serialized as SerializedSceneNode & { page?: string }).page = pageName;
+        }
+        components.push(serialized as SerializedSceneNode & { page?: string });
       }
       nodeRegistry.set(node.name, node);
     }
     if ('children' in node) {
-      (node as ChildrenMixin).children.forEach(findComponentsInNode);
+      (node as ChildrenMixin).children.forEach(child => findComponentsInNode(child, pageName));
     }
   }
 
-  figma.currentPage.children.forEach(findComponentsInNode);
+  if (allPages) {
+    // Search across all pages
+    for (const page of figma.root.children) {
+      page.children.forEach(child => findComponentsInNode(child, page.name));
+    }
+  } else {
+    // Search current page only
+    figma.currentPage.children.forEach(child => findComponentsInNode(child));
+  }
 
   return { success: true, nodes: components };
 }

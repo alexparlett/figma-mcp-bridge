@@ -609,8 +609,8 @@ export interface VariableData {
 
 // ============ Query/Reference Data ============
 
-/** Reference to a node by ID or name. */
-export interface NodeRefData {
+/** Reference to a node by ID or name, with query options for serialization. */
+export interface NodeRefData extends QueryData {
   nodeId?: string;
   name?: string;
 }
@@ -645,6 +645,8 @@ export interface QueryData {
   fields?: SerializableProp[];
   /** Exclude large properties like absoluteTransform, reactions, vectorNetwork. Default: true */
   excludeVerbose?: boolean;
+  /** Search across all pages instead of just the current page. Default: false */
+  allPages?: boolean;
 }
 
 /** Search for nodes matching criteria. Supports partial name matching (case-insensitive) and type filtering. Returns multiple matches. */
