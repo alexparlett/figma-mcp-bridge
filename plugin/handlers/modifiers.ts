@@ -43,7 +43,12 @@ export async function setFills(cmd: Command): Promise<BaseNode> {
     throw new Error('Node not found or does not support fills: ' + nodeId);
   }
 
-  (node as GeometryMixin).fills = convertPaintInputs(d.fills);
+  // Style ID and fills are mutually exclusive - style takes precedence
+  if (d.fillStyleId) {
+    (node as GeometryMixin & { fillStyleId: string }).fillStyleId = d.fillStyleId;
+  } else if (d.fills !== undefined) {
+    (node as GeometryMixin).fills = convertPaintInputs(d.fills);
+  }
   return node;
 }
 
@@ -58,8 +63,14 @@ export async function setStrokes(cmd: Command): Promise<BaseNode> {
     throw new Error('Node not found or does not support strokes: ' + nodeId);
   }
 
-  const strokeNode = node as MinimalStrokesMixin;
-  strokeNode.strokes = convertPaintInputs(d.strokes);
+  const strokeNode = node as MinimalStrokesMixin & { strokeStyleId?: string };
+
+  // Style ID and strokes are mutually exclusive - style takes precedence
+  if (d.strokeStyleId) {
+    strokeNode.strokeStyleId = d.strokeStyleId;
+  } else if (d.strokes !== undefined) {
+    strokeNode.strokes = convertPaintInputs(d.strokes);
+  }
 
   if (d.strokeWeight !== undefined) strokeNode.strokeWeight = d.strokeWeight;
   if (d.strokeAlign) strokeNode.strokeAlign = d.strokeAlign;
@@ -79,7 +90,12 @@ export async function setEffects(cmd: Command): Promise<BaseNode> {
     throw new Error('Node not found or does not support effects: ' + nodeId);
   }
 
-  (node as BlendMixin).effects = convertEffectInputs(d.effects);
+  // Style ID and effects are mutually exclusive - style takes precedence
+  if (d.effectStyleId) {
+    (node as BlendMixin & { effectStyleId: string }).effectStyleId = d.effectStyleId;
+  } else if (d.effects !== undefined) {
+    (node as BlendMixin).effects = convertEffectInputs(d.effects);
+  }
   return node;
 }
 
@@ -331,14 +347,22 @@ export async function updateNode(cmd: Command): Promise<BaseNode> {
     (sceneNode as BlendMixin).blendMode = d.blendMode;
   }
 
-  // Fills
-  if (d.fills && 'fills' in sceneNode) {
-    (sceneNode as GeometryMixin).fills = convertPaintInputs(d.fills);
+  // Fills - style ID and fills are mutually exclusive, style takes precedence
+  if ('fills' in sceneNode) {
+    if (d.fillStyleId) {
+      (sceneNode as GeometryMixin & { fillStyleId: string }).fillStyleId = d.fillStyleId;
+    } else if (d.fills !== undefined) {
+      (sceneNode as GeometryMixin).fills = convertPaintInputs(d.fills);
+    }
   }
 
-  // Strokes
-  if (d.strokes && 'strokes' in sceneNode) {
-    (sceneNode as MinimalStrokesMixin).strokes = convertPaintInputs(d.strokes);
+  // Strokes - style ID and strokes are mutually exclusive, style takes precedence
+  if ('strokes' in sceneNode) {
+    if (d.strokeStyleId) {
+      (sceneNode as MinimalStrokesMixin & { strokeStyleId: string }).strokeStyleId = d.strokeStyleId;
+    } else if (d.strokes !== undefined) {
+      (sceneNode as MinimalStrokesMixin).strokes = convertPaintInputs(d.strokes);
+    }
   }
   if (d.strokeWeight !== undefined && 'strokeWeight' in sceneNode) {
     (sceneNode as MinimalStrokesMixin).strokeWeight = d.strokeWeight;
@@ -350,9 +374,13 @@ export async function updateNode(cmd: Command): Promise<BaseNode> {
     (sceneNode as MinimalStrokesMixin).dashPattern = d.dashPattern;
   }
 
-  // Effects
-  if (d.effects && 'effects' in sceneNode) {
-    (sceneNode as BlendMixin).effects = convertEffectInputs(d.effects);
+  // Effects - style ID and effects are mutually exclusive, style takes precedence
+  if ('effects' in sceneNode) {
+    if (d.effectStyleId) {
+      (sceneNode as BlendMixin & { effectStyleId: string }).effectStyleId = d.effectStyleId;
+    } else if (d.effects !== undefined) {
+      (sceneNode as BlendMixin).effects = convertEffectInputs(d.effects);
+    }
   }
 
   // Corner radius
